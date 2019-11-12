@@ -10,16 +10,13 @@ static const char dmenufont[]       = "monospace:size=14";
 
 static const unsigned int baralpha    = 0xd0;
 static const unsigned int borderalpha = OPAQUE;
-//static const char col_gray1[]       = "#222222";
-//static const char col_gray2[]       = "#444444";
-//static const char col_gray3[]       = "#bbbbbb";
-//static const char col_gray4[]       = "#eeeeee";
-//static const char col_cyan[]        = "#005577";
-//static const char col_black[]       = "#000000";
-//static const char col_red[]         = "#ff0000";
-//static const char col_yellow[]      = "#ffff00";
-//static const char col_white[]       = "#ffffff";
 
+static char normbgcolor[]     = "#222222";
+static char normbordercolor[] = "#444444";
+static char normfgcolor[]     = "#bbbbbb";
+static char selfgcolor[]      = "#eeeeee";
+static char selbordercolor[]  = "#227799";
+static char selbgcolor[]      = "#005577";
 #define col_gray1  "#222222"
 #define col_gray2  "#444444"
 #define col_gray3  "#bbbbbb"
@@ -35,10 +32,10 @@ static const unsigned int borderalpha = OPAQUE;
 #define col_lime   "#699c20"
 
 #define NUMCOLORS 7
-static const char *colors[][NUMCOLORS] = {
+static char *colors[][NUMCOLORS] = {
 	/* fg        bg          border */
-	{ col_gray3, col_gray1 , col_gray2 },
-	{ col_gray4, col_cyan  , col_cyan2 },
+	{ normfgcolor, normbgcolor , normbordercolor },
+	{ selfgcolor, selbgcolor  , selbordercolor },
 	{ col_gray1, col_yellow, col_red   },
 	{ col_gray1, col_red   , col_red   },
 	{ col_gray1, col_green , col_lime  },
@@ -46,7 +43,7 @@ static const char *colors[][NUMCOLORS] = {
 	{ col_gray3, col_gray5 , col_gray2 },
 };
 
-static const unsigned int alphas[][NUMCOLORS]      = {
+static const unsigned int alphas[][NUMCOLORS] = {
 	/* fg     bg        border     */
 	{ OPAQUE, baralpha, borderalpha },
 	{ OPAQUE, baralpha, borderalpha },
@@ -98,7 +95,7 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbordercolor, "-sf", selfgcolor, NULL };
 static const char *termcmd[]  = { "st", NULL };
 
 #include "movestack.c"
@@ -130,7 +127,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
-//	{ MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
+	{ MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
