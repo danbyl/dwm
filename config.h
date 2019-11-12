@@ -3,6 +3,10 @@
 /* appearance */
 static const unsigned int borderpx  = 4;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
+static const unsigned int systraypinning = 0;   /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
+static const unsigned int systrayspacing = 2;   /* systray spacing */
+static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
+static const int showsystray        = 1;        /* 0 means no systray */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 0;        /* 0 means bottom bar */
 static const char *fonts[]          = { "monospace:size=14" };
@@ -31,16 +35,16 @@ static char selbgcolor[]      = "#005577";
 #define col_orange "#b37400"
 #define col_lime   "#699c20"
 
-#define NUMCOLORS 7
+#define NUMCOLORS 8
 static char *colors[][NUMCOLORS] = {
 	/* fg        bg          border */
-	{ normfgcolor, normbgcolor , normbordercolor },
-	{ selfgcolor, selbgcolor  , selbordercolor },
-	{ col_gray1, col_yellow, col_red   },
-	{ col_gray1, col_red   , col_red   },
-	{ col_gray1, col_green , col_lime  },
-	{ col_gray1, col_orange, col_red   },
-	{ col_gray3, col_gray5 , col_gray2 },
+	{ normfgcolor, normbgcolor , normbordercolor }, // 01
+	{ selfgcolor, selbgcolor  , selbordercolor },	// 02
+	{ col_gray1, col_yellow, col_red   },			// 03
+	{ col_gray1, col_red   , col_red   },			// 04
+	{ col_gray1, col_green , col_lime  },			// 05
+	{ col_gray1, col_orange, col_red   },			// 06
+	{ normfgcolor, col_gray5, col_gray2 },			// 07
 };
 
 static const unsigned int alphas[][NUMCOLORS] = {
