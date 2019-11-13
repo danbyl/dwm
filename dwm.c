@@ -846,15 +846,15 @@ drawbar(Monitor *m)
 		drw_setscheme(drw, scheme[SchemeNorm]);
         sw = TEXTW(stext) - lrpad / 2 + 2; /* 2px right padding */
 		while (1) {
-			if ((unsigned int)*ts >= LENGTH(colors)) { ts++; continue ; }
+			if ((unsigned int)*ts > LENGTH(colors)) { ts++; continue ; }
 			ctmp = *ts;
 			*ts = '\0';
-			drw_text(drw, m->ww - sw + tx - stw, 0, sw - tx, bh, lrpad / 2 - 2, tp, 0);
-			tx += TEXTW(tp) - lrpad / 2;
+			drw_text(drw, m->ww - sw + tx - stw, 0, sw - tx + lrpad/2, bh, 0, tp, 0);
+			tx += TEXTW(tp) - lrpad;
 			if (ctmp == '\0') { break; }
 			drw_setscheme(drw, scheme[(unsigned int)(ctmp-1)]);
 			*ts = ctmp;
-			tp = ++ts;
+			tp = ts++; // FIXME was ++ts, might cause problems xd
 		}
 	}
 

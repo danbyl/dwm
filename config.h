@@ -31,12 +31,11 @@ static char selbgcolor[]      = "#005577";
 #define col_black  "#000000"
 #define col_red    "#b30000"
 #define col_yellow "#b3b300"
-#define col_green  "#60752c"
+#define col_green  "#40952c"
 #define col_orange "#b37400"
 #define col_lime   "#699c20"
 
-#define NUMCOLORS 8
-static char *colors[][NUMCOLORS] = {
+static char *colors[][7] = {
 	/* fg        bg          border */
 	{ normfgcolor, normbgcolor , normbordercolor }, // 01
 	{ selfgcolor, selbgcolor  , selbordercolor },	// 02
@@ -47,7 +46,7 @@ static char *colors[][NUMCOLORS] = {
 	{ normfgcolor, col_gray5, col_gray2 },			// 07
 };
 
-static const unsigned int alphas[][NUMCOLORS] = {
+static const unsigned int alphas[][7] = { // yikes
 	/* fg     bg        border     */
 	{ OPAQUE, baralpha, borderalpha },
 	{ OPAQUE, baralpha, borderalpha },
