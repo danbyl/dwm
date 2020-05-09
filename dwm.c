@@ -1121,7 +1121,7 @@ drawbar(Monitor *m)
 
 	/* draw status first so it can be overdrawn by tags later */
 	/* if (m == selmon) { /1* status is only drawn on selected monitor *1/ */
-	sw = m->ww - drawstatusbar(m, bh, stext);
+	tw = m->ww - drawstatusbar(m, bh, stext);
 	/* } */
 
 	resizebarwin(m);
@@ -1147,7 +1147,7 @@ drawbar(Monitor *m)
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
-	if ((w = m->ww - sw - x) > bh) {
+	if ((w = m->ww - tw - x) > bh) {
 		if (n > 0) {
 			for (c = m->clients; c; c = c->next) {
 				if (!ISVISIBLE(c))
