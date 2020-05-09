@@ -30,11 +30,11 @@ static char selbgcolor[]            = "#005577";
 static char hidfgcolor[]            = "#ff0000";
 static char hidbordercolor[]        = "#080808";
 static char hidbgcolor[]            = "#080808";
-static char *colors[][3] = {
-       /*               fg           bg           border   */
-       [SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
-       [SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
-       [SchemeHid]  = { hidfgcolor,  hidbgcolor,  hidbordercolor },
+static char *colors[][3]            = {
+	/*               fg           bg           border   */
+	[SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
+	[SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
+	[SchemeHid]  = { hidfgcolor,  hidbgcolor,  hidbordercolor  },
 };
 
 /* tagging */
