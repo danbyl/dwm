@@ -46,9 +46,9 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-       /* class      instance    title       tags mask     isfloating   isterminal noswallow monitor */
-       { "Gimp",     NULL,       NULL,       1 << 8,       0,           0,         0,        -1 },
-       { "St",       NULL,       NULL,       0,            0,           1,         0,        -1 },
+	/* class      instance    title       tags mask     isfloating   isterminal noswallow monitor */
+	{ "Gimp",     NULL,       NULL,       1 << 8,       0,           0,         0,        -1 },
+	{ "St",       NULL,       NULL,       0,            0,           1,         0,        -1 },
 };
 
 /* layout(s) */
@@ -60,13 +60,13 @@ static const int resizehints = 1;    /* 1 means respect size hints in tiled resi
 #include "vanitygaps.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
- 	{ "[]=",	tile },						/* Default: Master on left, slaves on right */
+	{ "[]=",	tile },						/* Default: Master on left, slaves on right */
 	{ "TTT",	bstack },					/* Master on top, slaves on bottom */
 
 	{ "[@]",	spiral },					/* Fibonacci spiral */
 	{ "[\\]",	dwindle },					/* Decreasing in size right and leftward */
 
- 	{ "[M]",	monocle },					/* All windows on top of eachother */
+	{ "[M]",	monocle },					/* All windows on top of eachother */
 	{ "H[]",	deck },						/* Master on left, slaves in monocle-like mode on right */
 
 	{ "|M|",	centeredmaster },			/* Master in middle, slaves on sides */
