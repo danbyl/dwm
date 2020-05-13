@@ -144,8 +144,8 @@ struct Monitor {
 	int nmaster;
 	int num;
 	int by;               /* bar geometry */
-  int btw;              /* width of tasks portion of bar */
-  int bt;               /* number of tasks */
+	int btw;              /* width of tasks portion of bar */
+	int bt;               /* number of tasks */
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
 	unsigned int borderpx;
@@ -2218,9 +2218,11 @@ sendmon(Client *c, Monitor *m)
 {
 	if (c->mon == m)
 		return;
+	int activetags = 1;
 	unfocus(c, 1);
 	detach(c);
 	detachstack(c);
+	applyrules(c);
 	c->mon = m;
 	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
 	attach(c);
