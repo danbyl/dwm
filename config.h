@@ -63,8 +63,8 @@ static const Layout layouts[] = {
 	{ "[]=",	tile },						/* Default: Master on left, slaves on right */
 	{ "TTT",	bstack },					/* Master on top, slaves on bottom */
 
-	{ "[@]",	spiral },					/* Fibonacci spiral */
-	{ "[\\]",	dwindle },					/* Decreasing in size right and leftward */
+	/* { "[@]",	spiral },					/1* Fibonacci spiral *1/ */
+	/* { "[\\]",	dwindle },					/1* Decreasing in size right and leftward *1/ */
 
 	{ "[M]",	monocle },					/* All windows on top of eachother */
 	{ "H[]",	deck },						/* Master on left, slaves in monocle-like mode on right */
@@ -113,8 +113,8 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_y,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY,                       XK_u,      setlayout,      {.v = &layouts[4]} },
 	{ MODKEY|ShiftMask,             XK_u,      setlayout,      {.v = &layouts[5]} },
-	{ MODKEY,                       XK_i,      setlayout,      {.v = &layouts[6]} },
-	{ MODKEY|ShiftMask,             XK_i,      setlayout,      {.v = &layouts[7]} },
+	/* { MODKEY,                       XK_i,      setlayout,      {.v = &layouts[6]} }, */
+	/* { MODKEY|ShiftMask,             XK_i,      setlayout,      {.v = &layouts[7]} }, */
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
@@ -136,7 +136,6 @@ static Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_q,      killclient,     {0} },
-	/* { MODKEY|ControlMask,           XK_e,      quit,           {0} }, */
 };
 
 /* button definitions */
