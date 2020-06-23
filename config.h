@@ -26,7 +26,7 @@ static char normbgcolor[]           = "#111111";
 static char normbordercolor[]       = "#222222";
 static char normfgcolor[]           = "#bbbbbb";
 static char selfgcolor[]            = "#eeeeee";
-static char selbordercolor[]        = "#005577";
+static char selbordercolor[]        = "#116688";
 static char selbgcolor[]            = "#005577";
 static char hidfgcolor[]            = "#ff0000";
 static char hidbordercolor[]        = "#080808";
@@ -115,7 +115,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_u,      setlayout,      {.v = &layouts[5]} },
 	/* { MODKEY,                       XK_i,      setlayout,      {.v = &layouts[6]} }, */
 	/* { MODKEY|ShiftMask,             XK_i,      setlayout,      {.v = &layouts[7]} }, */
-	{ MODKEY,                       XK_space,  setlayout,      {0} },
+	{ MODKEY,                       XK_space,  zoom,           {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
 	{ MODKEY|ShiftMask,             XK_f,      togglefullscr,  {0} },
