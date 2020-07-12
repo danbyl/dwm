@@ -610,14 +610,14 @@ buttonpress(XEvent *e)
 			arg.ui = 1 << i;
 		} else if (ev->x < x + blw)
 			click = ClkLtSymbol;
-		else if (ev->x > (statusx = selmon->ww - statuswidth + 2 - stw)) {
+		else if (ev->x > (statusx = selmon->ww - statuswidth - stw)) {
 			click = ClkStatusText;
 
 			char *text = rawstext;
 			int i = -1;
 			char ch;
 			dwmblockssig = 0;
-			while (text[++i] && statusx < ev->x) {
+			while (text[++i] && statusx <= ev->x) {
 				if ((unsigned char)text[i] < ' ') {
 					ch = text[i];
 					text[i] = '\0';
