@@ -282,6 +282,7 @@ static void tagmon(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglefullscr(const Arg *arg);
+static void toggleswallow(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void togglewin(const Arg *arg);
@@ -1627,7 +1628,7 @@ manage(Window w, XWindowAttributes *wa)
 	arrange(c->mon);
 	if (!HIDDEN(c))
 		XMapWindow(dpy, c->win);
-	if (term)
+	if (term && swallowing)
 		swallow(term, c);
 	focus(NULL);
 }
@@ -2389,6 +2390,12 @@ togglefullscr(const Arg *arg)
 }
 
 void
+toggleswallow(const Arg *arg)
+{
+	swallowing ^= 1;
+}
+
+void
 toggletag(const Arg *arg)
 {
 	unsigned int newtags;
@@ -2482,7 +2489,7 @@ unmanage(Client *c, int destroyed)
 		free(s->swallowing);
 		s->swallowing = NULL;
 		arrange(m);
-        focus(NULL);
+		focus(NULL);
 		return;
 	}
 
