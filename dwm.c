@@ -324,9 +324,9 @@ static Systray *systray =  NULL;
 static const char broken[] = "broken";
 static char stext[1024];
 static char rawstext[1024];
-static int dwmblockssig;
+static int statussig;
 static int statuswidth;
-pid_t dwmblockspid = 0;
+pid_t statusbarpid = 0;
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static int bh, blw = 0;      /* bar geometry */
@@ -617,7 +617,7 @@ buttonpress(XEvent *e)
 			char *text = rawstext;
 			int i = -1;
 			char ch;
-			dwmblockssig = 0;
+			statussig = 0;
 			while (text[++i] && statusx <= ev->x) {
 				if ((unsigned char)text[i] < ' ') {
 					ch = text[i];
@@ -627,12 +627,11 @@ buttonpress(XEvent *e)
 					text += i+1;
 					i = -1;
 					if (statusx >= ev->x) break;
-					dwmblockssig = ch;
+					statussig = ch;
 				} else if (text[i] == '^') {
-					ch = text[i];
 					text[i] = '\0';
 					statusx += TEXTW(text) - lrpad;
-					text[i] = ch;
+					text[i] = '^';
 					if (text[++i] == 'f')
 						statusx += atoi(text + ++i);
 					while (text[i++] != '^');
@@ -1334,18 +1333,20 @@ getatomprop(Client *c, Atom prop)
 int
 getdwmblockspid()
 {
-	char buf[19];
+	char buf[24];
 	FILE *fp;
-	if (dwmblockspid) {
-		snprintf(buf, sizeof(buf), "/proc/%u/comm", dwmblockspid);
+	if (statusbarpid) {
+		snprintf(buf, sizeof(buf), "/proc/%u/comm", statusbarpid);
 		if ((fp = fopen(buf, "r"))) {
 			fgets(buf, sizeof(buf), fp);
 			fclose(fp);
-			if (!strncmp(buf, "dwmblocks", 9))
-				return dwmblockspid;
+			if (!strncmp(buf, getenv("STATUSBAR"), 9))
+				return statusbarpid;
 		}
 	}
-	fp = popen("pidof -s dwmblocks", "r");
+	char cmd[24] = "pidof -s ";
+	strcat(cmd, getenv("STATUSBAR"));
+	fp = popen(cmd, "r");
 	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
 	return strtoul(buf, NULL, 10);
@@ -2293,11 +2294,11 @@ void
 sigdwmblocks(const Arg *arg)
 {
 	union sigval sv;
-	sv.sival_int = (dwmblockssig << 8) | arg->i;
-	if (!(dwmblockspid = getdwmblockspid()))
+	sv.sival_int = (statussig << 8) | arg->i;
+	if (!(statusbarpid = getdwmblockspid()))
 		return;
 
-	sigqueue(dwmblockspid, SIGUSR1, sv);
+	sigqueue(statusbarpid, SIGUSR1, sv);
 }
 
 void
