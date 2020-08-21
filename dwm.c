@@ -642,12 +642,33 @@ buttonpress(XEvent *e)
 		} else {
 			x += blw;
 			c = m->clients;
-
+			int width, extra = 0, longer = 0, textw, n = m->bt, w = m->btw;
+			int tabw = (1.0 / (double)n) * w + 1;
+			for (c = m->clients; c; c = c->next) {
+				if (!ISVISIBLE(c))
+					continue;
+				textw = TEXTW(c->name);
+				if (textw <= tabw)
+					extra += tabw - textw;
+				else
+					longer++;
+			}
+			c = m->clients;
 			do {
 				if (!ISVISIBLE(c))
 					continue;
-				else
-					x += (1.0 / (double)m->bt) * m->btw;
+
+				textw = TEXTW(c->name);
+				if (textw <= tabw) {
+					width = textw;
+				} else {
+					width = tabw + extra / longer - lrpad / 2;
+				}
+				width = n == 1 ? w : width;
+				drw_text(drw, x, 0, width, bh, lrpad / 2, c->name, 0);
+				x += width;
+				w -= width;
+				n--;
 			} while (ev->x > x && (c = c->next));
 
 			if (c) {
@@ -1156,10 +1177,20 @@ drawbar(Monitor *m)
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
-	if ((w = m->ww - tw - x) > bh) {
+	m->bt = n;
+	if ((m->btw = w = m->ww - tw - x) > bh) {
 		if (n > 0) {
-			int remainder = w % n;
+			int width, extra = 0, longer = 0, textw;
 			int tabw = (1.0 / (double)n) * w + 1;
+			for (c = m->clients; c; c = c->next) {
+				if (!ISVISIBLE(c))
+					continue;
+				textw = TEXTW(c->name);
+				if (textw <= tabw)
+					extra += tabw - textw;
+				else
+					longer++;
+			}
 			for (c = m->clients; c; c = c->next) {
 				if (!ISVISIBLE(c))
 					continue;
@@ -1171,14 +1202,17 @@ drawbar(Monitor *m)
 					scm = SchemeNorm;
 				drw_setscheme(drw, scheme[scm]);
 
-				if (remainder >= 0) {
-					if (remainder == 0) {
-						tabw--;
-					}
-					remainder--;
+				textw = TEXTW(c->name);
+				if (textw <= tabw) {
+					width = textw;
+				} else {
+					width = tabw + extra / longer - lrpad / 2;
 				}
-				drw_text(drw, x, 0, tabw, bh, lrpad / 2, c->name, 0);
-				x += tabw;
+				width = n == 1 ? w : width;
+				drw_text(drw, x, 0, width, bh, lrpad / 2, c->name, 0);
+				x += width;
+				w -= width;
+				n--;
 			}
 		} else {
 			drw_setscheme(drw, scheme[SchemeNorm]);
@@ -1186,8 +1220,6 @@ drawbar(Monitor *m)
 		}
 	}
 
-	m->bt = n;
-	m->btw = w;
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 
