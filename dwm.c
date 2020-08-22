@@ -227,7 +227,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
-static int getdwmblockspid();
+static int getstatusbarpid();
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
@@ -274,7 +274,7 @@ static void showhide(Client *c);
 static void sigchld(int unused);
 static void sighup(int unused);
 static void sigterm(int unused);
-static void sigdwmblocks(const Arg *arg);
+static void sigstatusbar(const Arg *arg);
 static void spawn(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void tag(const Arg *arg);
@@ -1363,7 +1363,7 @@ getatomprop(Client *c, Atom prop)
 }
 
 int
-getdwmblockspid()
+getstatusbarpid()
 {
 	char buf[24];
 	FILE *fp;
@@ -2323,11 +2323,11 @@ sigchld(int unused)
 }
 
 void
-sigdwmblocks(const Arg *arg)
+sigstatusbar(const Arg *arg)
 {
 	union sigval sv;
 	sv.sival_int = (statussig << 8) | arg->i;
-	if (!(statusbarpid = getdwmblockspid()))
+	if (!(statusbarpid = getstatusbarpid()))
 		return;
 
 	sigqueue(statusbarpid, SIGUSR1, sv);
