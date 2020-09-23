@@ -213,7 +213,6 @@ static void clientmessage(XEvent *e);
 static void configure(Client *c);
 static void configurenotify(XEvent *e);
 static void configurerequest(XEvent *e);
-static void copyvalidchars(char *text, char *rawtext);
 static Monitor *createmon(void);
 static void destroynotify(XEvent *e);
 static void detach(Client *c);
@@ -325,7 +324,6 @@ static pid_t winpid(Window w);
 static Systray *systray =  NULL;
 static const char broken[] = "broken";
 static char stext[1024];
-static char rawstext[1024];
 static int statussig;
 static int statuswidth;
 pid_t statusbarpid = 0;
@@ -616,7 +614,7 @@ buttonpress(XEvent *e)
 		else if (ev->x > (statusx = selmon->ww - statuswidth - stw)) {
 			click = ClkStatusText;
 
-			char *text = rawstext;
+			char *text = stext;
 			int i = -1;
 			char ch;
 			statussig = 0;
@@ -926,19 +924,6 @@ configurerequest(XEvent *e)
 	XSync(dpy, False);
 }
 
-void
-copyvalidchars(char *text, char *rawtext)
-{
-	int i = -1, j = 0;
-
-	while(rawtext[++i]) {
-		if ((unsigned char)rawtext[i] >= ' ') {
-			text[j++] = rawtext[i];
-		}
-	}
-	text[j] = '\0';
-}
-
 Monitor *
 createmon(void)
 {
@@ -1033,7 +1018,7 @@ dirtomon(int dir)
 
 int
 drawstatusbar(Monitor *m, int bh, char* stext) {
-	int ret, i, w, x, len, stw = 0;
+	int ret, i, j, w, x, len, stw = 0;
 	short isCode = 0;
 	char *text;
 	char *p;
@@ -1045,7 +1030,12 @@ drawstatusbar(Monitor *m, int bh, char* stext) {
 	if (!(text = (char*) malloc(sizeof(char)*len)))
 		die("malloc");
 	p = text;
-	memcpy(text, stext, len);
+
+	i = -1, j = 0;
+	while(stext[++i])
+		if ((unsigned char)stext[i] >= ' ')
+			text[j++] = stext[i];
+	text[j] = '\0';
 
 	/* compute width of the status text */
 	w = 0;
@@ -1153,9 +1143,7 @@ drawbar(Monitor *m)
 	Client *c;
 
 	/* draw status first so it can be overdrawn by tags later */
-	/* if (m == selmon) { /1* status is only drawn on selected monitor *1/ */
 	tw = m->ww - drawstatusbar(m, bh, stext);
-	/* } */
 
 	resizebarwin(m);
 	for (c = m->clients; c; c = c->next) {
@@ -2800,10 +2788,9 @@ updatesizehints(Client *c)
 void
 updatestatus(void)
 {
-	if (!gettextprop(root, XA_WM_NAME, rawstext, sizeof(rawstext)))
+	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
 		strcpy(stext, "dwm-"VERSION);
-	else
-		copyvalidchars(stext, rawstext);
+
 	for(Monitor *m = mons; m; m = m->next)
 		drawbar(m);
 	updatesystray();
