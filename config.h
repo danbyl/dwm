@@ -1,21 +1,18 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const unsigned int borderpx  = 2;        /* border pixel of windows */
-static const unsigned int snap      = 12;       /* snap pixel */
-static const unsigned int gappih    = 15;       /* horiz inner gap between windows */
-static const unsigned int gappiv    = 15;       /* vert inner gap between windows */
-static const unsigned int gappoh    = 15;       /* horiz outer gap between windows and screen edge */
-static const unsigned int gappov    = 15;       /* vert outer gap between windows and screen edge */
-static int swallowing               = 1;        /* swallowing enabled/disabled */
-static const int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
-static const int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
+static unsigned int borderpx  = 2;        /* border pixel of windows */
+static unsigned int snap      = 12;       /* snap pixel */
+static unsigned int gapsize   = 15;       /* gap size */
+static int swallowing         = 1;        /* swallowing enabled/disabled */
+static int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
+static int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
 static const unsigned int systraypinning = 1;   /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
-static const int showsystray        = 1;        /* 0 means no systray */
-static const int showbar            = 1;        /* 0 means no bar */
-static const int topbar             = 0;        /* 0 means bottom bar */
+static int showsystray        = 1;        /* 0 means no systray */
+static int showbar            = 1;        /* 0 means no bar */
+static int topbar             = 0;        /* 0 means bottom bar */
 static const char *fonts[]          = { "monospace:size=12",
 										"Noto Color Emoji:pixelsize=12:antialias=true:autohint=true",
 										"JoyPixels:pixelsize=12:antialias=true:autohint=true",
@@ -52,9 +49,9 @@ static const Rule rules[] = {
 };
 
 /* layout(s) */
-static const float mfact     = 0.50; /* factor of master area size [0.05..0.95] */
-static const int nmaster     = 1;    /* number of clients in master area */
-static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
+static float mfact     = 0.50; /* factor of master area size [0.05..0.95] */
+static int nmaster     = 1;    /* number of clients in master area */
+static int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 
 #define FORCE_VSPLIT 1  /* nrowgrid layout: force two clients to always split vertically */
 #include "vanitygaps.c"
@@ -92,6 +89,33 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbordercolor, "-sf", selfgcolor, NULL };
 static const char *termcmd[]  = { "st", NULL };
 
+/*
+ * Xresources preferences to load at startup
+ */
+static ResourcePref resources[] = {
+		{ "normbgcolor",        STRING,  &normbgcolor },
+		{ "normbordercolor",    STRING,  &normbordercolor },
+		{ "normfgcolor",        STRING,  &normfgcolor },
+		{ "selbgcolor",         STRING,  &selbgcolor },
+		{ "selbordercolor",     STRING,  &selbordercolor },
+		{ "selfgcolor",         STRING,  &selfgcolor },
+		{ "hidbgcolor",         STRING,  &hidbgcolor },
+		{ "hidbordercolor",     STRING,  &hidbordercolor },
+		{ "hidfgcolor",         STRING,  &hidfgcolor },
+		{ "borderpx",          	INTEGER, &borderpx },
+		{ "snap",          		INTEGER, &snap },
+		{ "showsystray",       	INTEGER, &showsystray },
+		{ "showbar",          	INTEGER, &showbar },
+		{ "topbar",          	INTEGER, &topbar },
+		{ "nmaster",          	INTEGER, &nmaster },
+		{ "resizehints",       	INTEGER, &resizehints },
+		{ "mfact",      	 	FLOAT,   &mfact },
+		{ "gapsize",            INTEGER, &gapsize },
+		{ "swallowing",         INTEGER, &swallowing },
+		{ "swallowfloating",    INTEGER, &swallowfloating },
+		{ "smartgaps",          INTEGER, &smartgaps },
+};
+
 #include "movestack.c"
 static Key keys[] = {
 	/* modifier                     key        function        argument */
@@ -120,13 +144,13 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
 	{ MODKEY|ShiftMask,             XK_s,      toggleswallow,  {0} },
 	{ MODKEY|ShiftMask,             XK_f,      togglefullscr,  {0} },
+	{ MODKEY,                       XK_F5,     xrdb,           {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 	{ MODKEY,                       XK_Left,   focusmon,       {.i = -1 } },
 	{ MODKEY,                       XK_Right,  focusmon,       {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_Left,   tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_Right,  tagmon,         {.i = +1 } },
-	{ MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
