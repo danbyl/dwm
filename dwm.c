@@ -1107,17 +1107,24 @@ drawbar(Monitor *m)
 	tw = m->ww - drawstatusbar(m, bh, stext);
 
 	resizebarwin(m);
+	unsigned int has_non_any_tag_client = 0; /* bit set for tag if at least one client on tag is not TAGMASK */
+	int drawzerotag = 0;
 	for (c = m->clients; c; c = c->next) {
 		if (ISVISIBLE(c))
 			n++;
 		occ |= c->tags == 255 ? 0 : c->tags;
 		if (c->isurgent)
 			urg |= c->tags;
+
+		if (c->tags != TAGMASK)
+			has_non_any_tag_client |= c->tags;
+		 else
+			drawzerotag = 1;
 	}
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
 		/* do not draw vacant tags */
-		if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+		if (!((occ & 1 << i && has_non_any_tag_client & 1 << i) || m->tagset[m->seltags] & 1 << i))
 			continue;
 
 		w = TEXTW(tags[i]);
@@ -1125,6 +1132,13 @@ drawbar(Monitor *m)
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		x += w;
 	}
+	if (drawzerotag) {
+		w = TEXTW("0");
+		drw_setscheme(drw, scheme[m->tagset[m->seltags] == TAGMASK ? SchemeSel : SchemeSel]);
+		drw_text(drw, x, 0, w, bh, lrpad / 2, "0", 0);
+		x += w;
+	}
+
 	w = blw = TEXTW(m->ltsymbol);
 	drw_setscheme(drw, scheme[SchemeNorm]);
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
