@@ -1118,7 +1118,7 @@ drawbar(Monitor *m)
 
 		if (c->tags != TAGMASK)
 			has_non_any_tag_client |= c->tags;
-		 else
+		else
 			drawzerotag = 1;
 	}
 	x = 0;
