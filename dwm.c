@@ -1377,19 +1377,17 @@ getatomprop(Client *c, Atom prop)
 int
 getstatusbarpid()
 {
-	char buf[24];
+	char buf[24], *cmd = "pidof -s "STATUSBAR;
 	FILE *fp;
 	if (statusbarpid) {
 		snprintf(buf, sizeof(buf), "/proc/%u/comm", statusbarpid);
 		if ((fp = fopen(buf, "r"))) {
 			fgets(buf, sizeof(buf), fp);
 			fclose(fp);
-			if (!strncmp(buf, getenv("STATUSBAR"), 9))
+			if (!strncmp(buf, STATUSBAR, sizeof(STATUSBAR) - 1))
 				return statusbarpid;
 		}
 	}
-	char cmd[24] = "pidof -s ";
-	strcat(cmd, getenv("STATUSBAR"));
 	fp = popen(cmd, "r");
 	fgets(buf, sizeof(buf), fp);
 	pclose(fp);
@@ -2436,11 +2434,11 @@ void
 sigstatusbar(const Arg *arg)
 {
 	union sigval sv;
-	sv.sival_int = (statussig << 8) | arg->i;
+	sv.sival_int = arg->i;
 	if (!(statusbarpid = getstatusbarpid()))
 		return;
 
-	sigqueue(statusbarpid, SIGUSR1, sv);
+	sigqueue(statusbarpid, SIGRTMIN+statussig, sv);
 }
 
 void
