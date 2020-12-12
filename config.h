@@ -1,35 +1,36 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static unsigned int borderpx  = 2;        /* border pixel of windows */
-static unsigned int snap      = 12;       /* snap pixel */
-static unsigned int gapsize   = 15;       /* gap size */
-static int swallowing         = 1;        /* swallowing enabled/disabled */
-static int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
-static int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
+static unsigned int borderpx = 2;        /* border pixel of windows */
+static unsigned int snap     = 12;       /* snap pixel */
+static unsigned int gapsize  = 15;       /* gap size */
+static int swallowing        = 1;        /* swallowing enabled/disabled */
+static int swallowfloating   = 0;        /* 1 means swallow floating windows by default */
+static int smartgaps         = 0;        /* 1 means no outer gap when there is only one window */
 static const unsigned int systraypinning = 1;   /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display systray on the first monitor, False: display systray on the last monitor*/
-static int showsystray        = 1;        /* 0 means no systray */
-static int showbar            = 1;        /* 0 means no bar */
-static int topbar             = 0;        /* 0 means bottom bar */
-static const char *fonts[]          = { "monospace:size=12",
-										"Noto Color Emoji:pixelsize=12:antialias=true:autohint=true",
-										"JoyPixels:pixelsize=12:antialias=true:autohint=true",
-										"Font Awesome:size=20:antialias=true:autohint=true",
-										"Symbola:size=12",
-									};
-static const char dmenufont[]       = "monospace:size=12";
-static char normbgcolor[]           = "#111111";
-static char normbordercolor[]       = "#222222";
-static char normfgcolor[]           = "#bbbbbb";
-static char selfgcolor[]            = "#eeeeee";
-static char selbordercolor[]        = "#116688";
-static char selbgcolor[]            = "#005577";
-static char hidfgcolor[]            = "#ff0000";
-static char hidbordercolor[]        = "#080808";
-static char hidbgcolor[]            = "#080808";
-static char *colors[][3]            = {
+static int showsystray = 1;        /* 0 means no systray */
+static int showbar     = 1;        /* 0 means no bar */
+static int topbar      = 0;        /* 0 means bottom bar */
+static const char *fonts[] = {
+	"monospace:size=12",
+	"Noto Color Emoji:pixelsize=12:antialias=true:autohint=true",
+	"JoyPixels:pixelsize=12:antialias=true:autohint=true",
+	"Font Awesome:size=20:antialias=true:autohint=true",
+	"Symbola:size=12",
+};
+static const char dmenufont[] = "monospace:size=12";
+static char normbgcolor[]     = "#111111";
+static char normbordercolor[] = "#222222";
+static char normfgcolor[]     = "#bbbbbb";
+static char selfgcolor[]      = "#eeeeee";
+static char selbordercolor[]  = "#116688";
+static char selbgcolor[]      = "#005577";
+static char hidfgcolor[]      = "#ff0000";
+static char hidbordercolor[]  = "#080808";
+static char hidbgcolor[]      = "#080808";
+static char *colors[][3] = {
 	/*               fg           bg           border   */
 	[SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
 	[SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
@@ -57,20 +58,20 @@ static int resizehints = 1;    /* 1 means respect size hints in tiled resizals *
 #include "vanitygaps.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "[]=",	tile },						/* Default: Master on left, slaves on right */
-	{ "TTT",	bstack },					/* Master on top, slaves on bottom */
+	{ "[]=",      tile },    /* Default: Master on left, slaves on right */
+	{ "TTT",      bstack },  /* Master on top, slaves on bottom */
 
-	/* { "[@]",	spiral },					/1* Fibonacci spiral *1/ */
-	/* { "[\\]",	dwindle },					/1* Decreasing in size right and leftward *1/ */
+	{ "[M]",      monocle }, /* All windows on top of eachother */
+	{ "H[]",      deck },    /* Master on left, slaves in monocle-like mode on right */
 
-	{ "[M]",	monocle },					/* All windows on top of eachother */
-	{ "H[]",	deck },						/* Master on left, slaves in monocle-like mode on right */
+	{ "|M|",      centeredmaster },         /* Master in middle, slaves on sides */
+	{ ">M>",      centeredfloatingmaster }, /* Same but master floats */
 
-	{ "|M|",	centeredmaster },			/* Master in middle, slaves on sides */
-	{ ">M>",	centeredfloatingmaster },	/* Same but master floats */
+	{ "><>",      NULL },    /* no layout function means floating behavior */
 
-	{ "><>",	NULL },						/* no layout function means floating behavior */
-	/* { NULL,		NULL }, */
+	/* { "[@]",      spiral },  /1* Fibonacci spiral *1/ */
+	/* { "[\\]",     dwindle }, /1* Decreasing in size right and leftward *1/ */
+	{ NULL,       NULL },
 };
 
 /* key definitions */
@@ -93,27 +94,27 @@ static const char *termcmd[]  = { "st", NULL };
  * Xresources preferences to load at startup
  */
 static ResourcePref resources[] = {
-		{ "normbgcolor",        STRING,  &normbgcolor },
-		{ "normbordercolor",    STRING,  &normbordercolor },
-		{ "normfgcolor",        STRING,  &normfgcolor },
-		{ "selbgcolor",         STRING,  &selbgcolor },
-		{ "selbordercolor",     STRING,  &selbordercolor },
-		{ "selfgcolor",         STRING,  &selfgcolor },
-		{ "hidbgcolor",         STRING,  &hidbgcolor },
-		{ "hidbordercolor",     STRING,  &hidbordercolor },
-		{ "hidfgcolor",         STRING,  &hidfgcolor },
-		{ "borderpx",          	INTEGER, &borderpx },
-		{ "snap",          		INTEGER, &snap },
-		{ "showsystray",       	INTEGER, &showsystray },
-		{ "showbar",          	INTEGER, &showbar },
-		{ "topbar",          	INTEGER, &topbar },
-		{ "nmaster",          	INTEGER, &nmaster },
-		{ "resizehints",       	INTEGER, &resizehints },
-		{ "mfact",      	 	FLOAT,   &mfact },
-		{ "gapsize",            INTEGER, &gapsize },
-		{ "swallowing",         INTEGER, &swallowing },
-		{ "swallowfloating",    INTEGER, &swallowfloating },
-		{ "smartgaps",          INTEGER, &smartgaps },
+		{ "normbgcolor",     STRING,  &normbgcolor },
+		{ "normbordercolor", STRING,  &normbordercolor },
+		{ "normfgcolor",     STRING,  &normfgcolor },
+		{ "selbgcolor",      STRING,  &selbgcolor },
+		{ "selbordercolor",  STRING,  &selbordercolor },
+		{ "selfgcolor",      STRING,  &selfgcolor },
+		{ "hidbgcolor",      STRING,  &hidbgcolor },
+		{ "hidbordercolor",  STRING,  &hidbordercolor },
+		{ "hidfgcolor",      STRING,  &hidfgcolor },
+		{ "borderpx",        INTEGER, &borderpx },
+		{ "snap",            INTEGER, &snap },
+		{ "showsystray",     INTEGER, &showsystray },
+		{ "showbar",         INTEGER, &showbar },
+		{ "topbar",          INTEGER, &topbar },
+		{ "nmaster",         INTEGER, &nmaster },
+		{ "resizehints",     INTEGER, &resizehints },
+		{ "mfact",           FLOAT,   &mfact },
+		{ "gapsize",         INTEGER, &gapsize },
+		{ "swallowing",      INTEGER, &swallowing },
+		{ "swallowfloating", INTEGER, &swallowfloating },
+		{ "smartgaps",       INTEGER, &smartgaps },
 };
 
 #include "movestack.c"
