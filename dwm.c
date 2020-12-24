@@ -258,7 +258,6 @@ static void run(void);
 static void scan(void);
 static int sendevent(Window w, Atom proto, int m, long d0, long d1, long d2, long d3, long d4);
 static void sendmon(Client *c, Monitor *m);
-static void setborderpx(const Arg *arg);
 static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
@@ -277,6 +276,7 @@ static Monitor *systraytomon(Monitor *m);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void togglebar(const Arg *arg);
+static void toggleborders(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglefullscr(const Arg *arg);
 static void toggleswallow(const Arg *arg);
@@ -1546,7 +1546,7 @@ xrdb(const Arg *arg)
 
 	/* FIXME: do this in a better way */
 	/* run functions with empty argument to "properly" update */
-	setborderpx(arg);
+	toggleborders(arg);
 	defaultgaps(arg);
 
 	focus(NULL);
@@ -2424,6 +2424,27 @@ togglebar(const Arg *arg)
 				wc.y = selmon->mh - bh;
 		}
 		XConfigureWindow(dpy, systray->win, CWY, &wc);
+	}
+	arrange(selmon);
+}
+
+void
+toggleborders(const Arg *arg)
+{
+	Client *c;
+	int prev_borderpx = selmon->borderpx;
+	selmon->borderpx = selmon->borderpx ? 0 : borderpx;
+
+	for (c = selmon->clients; c; c = c->next)
+	{
+		c->bw = selmon->borderpx;
+		if (c->isfloating || !selmon->lt[selmon->sellt]->arrange)
+		{
+			if (prev_borderpx > borderpx)
+				resize(c, c->x, c->y, c->w + 2*(prev_borderpx - borderpx), c->h + 2*(prev_borderpx - borderpx), 0);
+			else if (prev_borderpx < borderpx)
+				resize(c, c->x, c->y, c->w-2*(borderpx - prev_borderpx), c->h-2*(borderpx - prev_borderpx), 0);
+		}
 	}
 	arrange(selmon);
 }
