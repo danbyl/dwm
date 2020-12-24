@@ -14,6 +14,7 @@ static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display 
 static int showsystray = 1;        /* 0 means no systray */
 static int showbar     = 1;        /* 0 means no bar */
 static int topbar      = 0;        /* 0 means bottom bar */
+static void (*attach)(Client *c) = attachmaster; /* attachmaster, attachabove, attachbelow, attachtop, attachbottom */
 static const char *fonts[] = {
 	"monospace:size=12",
 	"Noto Color Emoji:pixelsize=12:antialias=true:autohint=true",

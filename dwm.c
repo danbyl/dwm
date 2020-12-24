@@ -52,7 +52,8 @@
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
-#define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
+#define ISVISIBLEONTAG(C, T)    ((C->tags & T))
+#define ISVISIBLE(C)            ISVISIBLEONTAG(C, C->mon->tagset[C->mon->seltags])
 #define HIDDEN(C)               ((getstate(C->win) == IconicState))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
@@ -88,6 +89,7 @@ enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
+enum { AttachMaster, AttachAbove, AttachBelow, AttachTop, AttachBottom };
 
 typedef union {
 	int i;
@@ -197,8 +199,11 @@ static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 static void arrange(Monitor *m);
 static void arrangemon(Monitor *m);
-static void attach(Client *c);
+static void attachabove(Client *c);
+static void attachbelow(Client *c);
 static void attachbottom(Client *c);
+static void attachmaster(Client *c);
+static void attachtop(Client *c);
 static void attachstack(Client *c);
 static void buttonpress(XEvent *e);
 static void checkotherwm(void);
@@ -258,6 +263,7 @@ static void run(void);
 static void scan(void);
 static int sendevent(Window w, Atom proto, int m, long d0, long d1, long d2, long d3, long d4);
 static void sendmon(Client *c, Monitor *m);
+static void setattach(const Arg *arg);
 static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
@@ -345,6 +351,13 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[PropertyNotify] = propertynotify,
 	[ResizeRequest] = resizerequest,
 	[UnmapNotify] = unmapnotify
+};
+static void (*attachfunctions[])(Client *c) = {
+	[AttachMaster] = attachmaster,
+	[AttachAbove] = attachabove,
+	[AttachBelow] = attachbelow,
+	[AttachTop] = attachtop,
+	[AttachBottom] = attachbottom,
 };
 static Atom wmatom[WMLast], netatom[NetLast], xatom[XLast];
 static int restart = 0;
@@ -501,10 +514,28 @@ arrangemon(Monitor *m)
 }
 
 void
-attach(Client *c)
+attachabove(Client *c)
 {
-	c->next = c->mon->clients;
-	c->mon->clients = c;
+	if (c->mon->sel == NULL || c->mon->sel == c->mon->clients || c->mon->sel->isfloating) {
+		attachmaster(c);
+		return;
+	}
+
+	Client *at;
+	for (at = c->mon->clients; at->next != c->mon->sel; at = at->next);
+	c->next = at->next;
+	at->next = c;
+}
+
+void
+attachbelow(Client *c)
+{
+	if(c->mon->sel == NULL || c->mon->sel == c || c->mon->sel->isfloating) {
+		attachmaster(c);
+		return;
+	}
+	c->next = c->mon->sel->next;
+	c->mon->sel->next = c;
 }
 
 void
@@ -515,6 +546,32 @@ attachbottom(Client *c)
 	c->next = NULL;
 	if (below)
 		below->next = c;
+	else
+		c->mon->clients = c;
+}
+
+void
+attachmaster(Client *c)
+{
+	c->next = c->mon->clients;
+	c->mon->clients = c;
+}
+
+void
+attachtop(Client *c)
+{
+	int n;
+	Monitor *m = selmon;
+	Client *below;
+
+	for (n = 1, below = c->mon->clients;
+		below && below->next && (below->isfloating || !ISVISIBLEONTAG(below, c->tags) || n != m->nmaster);
+		n = below->isfloating || !ISVISIBLEONTAG(below, c->tags) ? n + 0 : n + 1, below = below->next);
+	c->next = NULL;
+	if (below) {
+		c->next = below->next;
+		below->next = c;
+	}
 	else
 		c->mon->clients = c;
 }
@@ -1604,7 +1661,7 @@ manage(Window w, XWindowAttributes *wa)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating)
 		XRaiseWindow(dpy, c->win);
-	attachbottom(c);
+	attach(c);
 	attachstack(c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
@@ -2076,7 +2133,7 @@ sendmon(Client *c, Monitor *m)
 	detachstack(c);
 	c->mon = m;
 	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
-	attachbottom(c);
+	attach(c);
 	attachstack(c);
 	focus(NULL);
 	arrange(NULL);
@@ -2115,6 +2172,15 @@ setborderpx(const Arg *arg)
 	}
 	arrange(selmon);
 }
+
+void
+setattach(const Arg *arg)
+{
+	if (!arg || arg->ui >= LENGTH(attachfunctions))
+		return;
+	attach = attachfunctions[arg->ui];
+}
+
 
 void
 setclientstate(Client *c, long state)
@@ -2738,7 +2804,7 @@ updategeom(void)
 					m->clients = c->next;
 					detachstack(c);
 					c->mon = mons;
-					attachbottom(c);
+					attach(c);
 					attachstack(c);
 				}
 				if (m == selmon)
