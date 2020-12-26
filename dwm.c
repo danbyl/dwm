@@ -1546,7 +1546,6 @@ xrdb(const Arg *arg)
 
 	/* FIXME: do this in a better way */
 	/* run functions with empty argument to "properly" update */
-	toggleborders(arg);
 	defaultgaps(arg);
 
 	focus(NULL);
