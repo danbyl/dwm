@@ -1914,6 +1914,10 @@ resizemouse(const Arg *arg)
 
 			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
 			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
+			if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw)) < snap)
+				nw = selmon->wx + selmon->ww - c->x - 2 * c->bw;
+			if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw)) < snap)
+				nh = selmon->wy + selmon->wh - c->y - 2 * c->bw;
 			if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
 			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
 			{
