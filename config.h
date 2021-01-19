@@ -4,6 +4,7 @@
 static unsigned int borderpx = 2;        /* border pixel of windows */
 static unsigned int snap     = 12;       /* snap pixel */
 static unsigned int gapsize  = 15;       /* gap size */
+static int enablegaps        = 0;
 static int swallowing        = 1;        /* swallowing enabled/disabled */
 static int swallowfloating   = 0;        /* 1 means swallow floating windows by default */
 static int smartgaps         = 0;        /* 1 means no outer gap when there is only one window */
@@ -94,27 +95,28 @@ static const char *termcmd[]  = { "st", NULL };
  * Xresources preferences to load at startup
  */
 static ResourcePref resources[] = {
-		{ "normbgcolor",     STRING,  &normbgcolor },
-		{ "normbordercolor", STRING,  &normbordercolor },
-		{ "normfgcolor",     STRING,  &normfgcolor },
-		{ "selbgcolor",      STRING,  &selbgcolor },
-		{ "selbordercolor",  STRING,  &selbordercolor },
-		{ "selfgcolor",      STRING,  &selfgcolor },
-		{ "hidbgcolor",      STRING,  &hidbgcolor },
-		{ "hidbordercolor",  STRING,  &hidbordercolor },
-		{ "hidfgcolor",      STRING,  &hidfgcolor },
-		{ "borderpx",        INTEGER, &borderpx },
-		{ "snap",            INTEGER, &snap },
-		{ "showsystray",     INTEGER, &showsystray },
-		{ "showbar",         INTEGER, &showbar },
-		{ "topbar",          INTEGER, &topbar },
-		{ "nmaster",         INTEGER, &nmaster },
-		{ "resizehints",     INTEGER, &resizehints },
-		{ "mfact",           FLOAT,   &mfact },
-		{ "gapsize",         INTEGER, &gapsize },
-		{ "swallowing",      INTEGER, &swallowing },
-		{ "swallowfloating", INTEGER, &swallowfloating },
-		{ "smartgaps",       INTEGER, &smartgaps },
+	{ "normbgcolor",     STRING,  &normbgcolor },
+	{ "normbordercolor", STRING,  &normbordercolor },
+	{ "normfgcolor",     STRING,  &normfgcolor },
+	{ "selbgcolor",      STRING,  &selbgcolor },
+	{ "selbordercolor",  STRING,  &selbordercolor },
+	{ "selfgcolor",      STRING,  &selfgcolor },
+	{ "hidbgcolor",      STRING,  &hidbgcolor },
+	{ "hidbordercolor",  STRING,  &hidbordercolor },
+	{ "hidfgcolor",      STRING,  &hidfgcolor },
+	{ "borderpx",        INTEGER, &borderpx },
+	{ "snap",            INTEGER, &snap },
+	{ "showsystray",     INTEGER, &showsystray },
+	{ "showbar",         INTEGER, &showbar },
+	{ "topbar",          INTEGER, &topbar },
+	{ "nmaster",         INTEGER, &nmaster },
+	{ "resizehints",     INTEGER, &resizehints },
+	{ "mfact",           FLOAT,   &mfact },
+	{ "gapsize",         INTEGER, &gapsize },
+	{ "enablegaps",      INTEGER, &enablegaps },
+	{ "swallowing",      INTEGER, &swallowing },
+	{ "swallowfloating", INTEGER, &swallowfloating },
+	{ "smartgaps",       INTEGER, &smartgaps },
 };
 
 #include "movestack.c"

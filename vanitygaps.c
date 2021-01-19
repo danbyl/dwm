@@ -17,9 +17,6 @@ static void tile(Monitor *);
 static void getgaps(Monitor *m, int *size, unsigned int *nc);
 static void setgaps(int size);
 
-/* Settings */
-static int enablegaps = 0;
-
 static void
 setgaps(int size)
 {
