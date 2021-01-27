@@ -1687,7 +1687,7 @@ motionnotify(XEvent *e)
 void
 movemouse(const Arg *arg)
 {
-	int x, y, ocx, ocy, nx, ny;
+	int x, y, ocx, ocy, nx, ny, effectivegapsize;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -1720,12 +1720,21 @@ movemouse(const Arg *arg)
 
 			nx = ocx + (ev.xmotion.x - x);
 			ny = ocy + (ev.xmotion.y - y);
-			if (abs(selmon->wx - nx) < snap)
+			effectivegapsize = gapsize * (enablegaps != 0);
+			if (abs(selmon->wx + effectivegapsize - nx) < snap)
+				nx = selmon->wx + effectivegapsize;
+			else if (abs(selmon->wx - nx) < snap)
 				nx = selmon->wx;
+			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c) + effectivegapsize)) < snap)
+				nx = selmon->wx + selmon->ww - WIDTH(c) - effectivegapsize;
 			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c))) < snap)
 				nx = selmon->wx + selmon->ww - WIDTH(c);
-			if (abs(selmon->wy - ny) < snap)
+			if (abs(selmon->wy + effectivegapsize - ny) < snap)
+				ny = selmon->wy + effectivegapsize;
+			else if (abs(selmon->wy - ny) < snap)
 				ny = selmon->wy;
+			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c) + effectivegapsize)) < snap)
+				ny = selmon->wy + selmon->wh - HEIGHT(c) - effectivegapsize;
 			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)
 				ny = selmon->wy + selmon->wh - HEIGHT(c);
 			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
@@ -1882,7 +1891,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
 void
 resizemouse(const Arg *arg)
 {
-	int ocx, ocy, nw, nh;
+	int ocx, ocy, nw, nh, effectivegapsize;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -1914,9 +1923,14 @@ resizemouse(const Arg *arg)
 
 			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
 			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
-			if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw)) < snap)
+			effectivegapsize = gapsize * (enablegaps != 0);
+			if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw + effectivegapsize)) < snap)
+				nw = selmon->wx + selmon->ww - c->x - 2 * c->bw - effectivegapsize;
+			else if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw)) < snap)
 				nw = selmon->wx + selmon->ww - c->x - 2 * c->bw;
-			if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw)) < snap)
+			if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw + effectivegapsize)) < snap)
+				nh = selmon->wy + selmon->wh - c->y - 2 * c->bw - effectivegapsize;
+			else if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw)) < snap)
 				nh = selmon->wy + selmon->wh - c->y - 2 * c->bw;
 			if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
 			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
