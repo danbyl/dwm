@@ -194,6 +194,21 @@ struct Systray {
 	Client *icons;
 };
 
+typedef struct DmenuItem DmenuItem;
+struct DmenuItem {
+	const char *name;
+	const Arg arg;
+	void (*func)(const Arg *arg);
+};
+
+typedef struct DmenuArg DmenuArg;
+struct DmenuArg {
+	const DmenuItem *items;
+	const char *prompt;
+	void (*func)(const Arg *arg);
+	int strarg; /* if set, func will be called with arg.v = dmenu output string */
+};
+
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
@@ -218,6 +233,7 @@ static void destroynotify(XEvent *e);
 static void detach(Client *c);
 static void detachstack(Client *c);
 static Monitor *dirtomon(int dir);
+static void dmenuaction(const Arg *arg);
 static void drawbar(Monitor *m);
 static void drawbars(void);
 static int drawstatusbar(Monitor *m, int bh, char* text);
@@ -278,6 +294,7 @@ static void sighup(int unused);
 static void sigterm(int unused);
 static void sigstatusbar(const Arg *arg);
 static void spawn(const Arg *arg);
+static void strsetmfact(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
@@ -1034,8 +1051,80 @@ dirtomon(int dir)
 	return m;
 }
 
+void
+dmenuaction(const Arg *arg)
+{
+	DmenuArg *action = (DmenuArg *)arg->v;
+	int inpipe[2], outpipe[2], outputlen, wstatus;
+	pid_t child;
+	const char *cmd[] = { "dmenu", "-m", dmenumon, "-fn", dmenufont, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, "-l", "10", action->prompt ? "-p" : NULL, action->prompt, NULL };
+	char buf[256];
+	Arg strarg;
+
+	dmenumon[0] = '0' + selmon->num;
+	if (pipe(inpipe) < 0)
+		return;
+	if (pipe(outpipe) < 0)
+		goto close_in;
+
+	if ((child = fork()) == 0) {
+		dup2(inpipe[0], STDIN_FILENO);
+		dup2(outpipe[1], STDOUT_FILENO);
+		for (const DmenuItem *item = action->items; item->name; item++) {
+			write(inpipe[1], item->name, strlen(item->name));
+			write(inpipe[1], "\n", 1);
+		}
+		close(inpipe[1]);
+		close(outpipe[0]);
+		close(outpipe[1]);
+		execvp(cmd[0], (char **)cmd);
+		fprintf(stderr, "dwm: execvp %s", ((char **)cmd)[0]);
+		perror(" failed");
+		exit(1);
+	} else if (child < 0) {
+		perror("dwm: fork");
+		goto close_both;
+	}
+
+	close(inpipe[0]);
+	close(inpipe[1]);
+	close(outpipe[1]);
+
+	waitpid(child, &wstatus, 0);
+	if (WEXITSTATUS(wstatus)) {
+		close(outpipe[0]);
+		return;
+	}
+
+	outputlen = read(outpipe[0], buf, sizeof(buf) - 1);
+	close(outpipe[0]);
+	if (outputlen < 1)
+		return;
+	buf[outputlen-1] = '\0';
+
+	if (action->strarg) {
+		strarg.v = buf;
+		action->func(&strarg);
+	} else {
+		for (const DmenuItem *item = action->items; item->name; item++) {
+			if (!strncmp(item->name, buf, strlen(item->name))) {
+				(item->func ? item->func : action->func)(&item->arg);
+				break;
+			}
+		}
+	}
+	return;
+close_both:
+		close(outpipe[0]);
+		close(outpipe[1]);
+close_in:
+		close(inpipe[0]);
+		close(inpipe[1]);
+}
+
 int
-drawstatusbar(Monitor *m, int bh, char* stext) {
+drawstatusbar(Monitor *m, int bh, char* stext)
+{
 	int ret, i, j, w, x, len, stw = 0;
 	short isCode = 0;
 	char *text;
@@ -2469,6 +2558,25 @@ spawn(const Arg *arg)
 		perror(" failed");
 		exit(EXIT_SUCCESS);
 	}
+}
+
+void
+strsetmfact(const Arg *arg)
+{
+	Arg fact;
+	const char *str = arg->v;
+
+	if (str == NULL)
+		return;
+	if (strlen(str) == 0)
+		return;
+
+	fact.f = strtof(str, NULL);
+	if (!(str[0] == '.') && !(str[0] && str[1] == '.'))
+		fact.f /= 100.0;
+	fact.f += 1.0;
+
+	setmfact(&fact);
 }
 
 void

@@ -23,6 +23,7 @@ static const char *fonts[] = {
 	"Symbola:size=12",
 };
 static const char dmenufont[] = "monospace:size=12";
+static const char dmenufontlarge[] = "monospace:size=16";
 static char normbgcolor[]     = "#111111";
 static char normbordercolor[] = "#222222";
 static char normfgcolor[]     = "#bbbbbb";
@@ -91,8 +92,10 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbordercolor, "-sf", selfgcolor, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufontlarge, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
 static const char *termcmd[]  = { "st", NULL };
+
+#include "dmenuaction.h"
 
 /*
  * Xresources preferences to load at startup
@@ -149,7 +152,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
 	{ MODKEY|ShiftMask,             XK_s,      toggleswallow,  {0} },
 	{ MODKEY|ShiftMask,             XK_f,      togglefullscr,  {0} },
-	{ MODKEY,                       XK_F5,     xrdb,           {0} },
+	{ MODKEY,                       XK_F5,     dmenuaction,    {.v = &actionarg } },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 	{ MODKEY,                       XK_Left,   focusmon,       {.i = -1 } },
