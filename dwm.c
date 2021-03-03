@@ -2216,15 +2216,49 @@ scan(void)
 void
 sendmon(Client *c, Monitor *m)
 {
+	int matchedtagrule = 0;
 	if (c->mon == m)
 		return;
-	int activetags = 1;
 	unfocus(c, 1);
 	detach(c);
 	detachstack(c);
-	applyrules(c);
 	c->mon = m;
-	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
+
+	const char *class, *instance;
+	const Rule *r;
+	XClassHint ch = { NULL, NULL };
+	XGetClassHint(dpy, c->win, &ch);
+	class    = ch.res_class ? ch.res_class : broken;
+	instance = ch.res_name  ? ch.res_name  : broken;
+	for (int i = 0; i < rulecount; i++) {
+		r = &rules[i];
+		if ((!r->title || strstr(c->name, r->title))
+		&& (!r->class || strstr(class, r->class))
+		&& (!r->instance || strstr(instance, r->instance)))
+		{
+			if (r->tags) {
+				matchedtagrule = 1;
+				c->isfloating = r->isfloating;
+				c->tags = r->tags;
+			}
+		}
+	}
+	if (!matchedtagrule)
+		c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
+
+	if (ch.res_class)
+		XFree(ch.res_class);
+	if (ch.res_name)
+		XFree(ch.res_name);
+
+	/* FIXME: I don't know why this works or why it's 'required', but without this,
+	 * windows sometimes freeze when being sent to other monitors, which could
+	 * be fixed by resizing with the mouse, which calls the resize function.
+	 * There's probably a better way of fixing this issue. This doesn't always
+	 * seem to work either.
+	 */
+	resize(c, c->x, c->y, c->w, c->h, 1);
+
 	attach(c);
 	attachstack(c);
 	focus(NULL);
