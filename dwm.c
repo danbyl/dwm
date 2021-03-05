@@ -306,6 +306,7 @@ static void toggleswallow(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void togglewin(const Arg *arg);
+static void togglewinhidden(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
@@ -2767,6 +2768,16 @@ togglewin(const Arg *arg)
 		focus(c);
 		restack(selmon);
 	}
+}
+
+void
+togglewinhidden(const Arg *arg)
+{
+	Client *c = (Client *)arg->v;
+	if (HIDDEN(c))
+		show(c);
+	else
+		hide(c);
 }
 
 void
