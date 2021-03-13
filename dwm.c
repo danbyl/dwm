@@ -2241,6 +2241,11 @@ sendmon(Client *c, Monitor *m)
 				matchedtagrule = 1;
 				c->isfloating = r->isfloating;
 				c->tags = r->tags;
+
+				Monitor *current = selmon;
+				selmon = m;
+				view(&(const Arg){.i = r->tags});
+				selmon = current;
 			}
 		}
 	}
