@@ -305,7 +305,7 @@ static void togglefullscr(const Arg *arg);
 static void toggleswallow(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
-static void togglewin(const Arg *arg);
+static void togglewinfocus(const Arg *arg);
 static void togglewinhidden(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
@@ -2762,17 +2762,15 @@ toggleview(const Arg *arg)
 }
 
 void
-togglewin(const Arg *arg)
+togglewinfocus(const Arg *arg)
 {
 	Client *c = (Client*)arg->v;
-	if (c == selmon->sel)
-		hide(c);
-	else {
-		if (HIDDEN(c))
-			show(c);
-		focus(c);
-		restack(selmon);
-	}
+	if (!c)
+		return;
+	if (HIDDEN(c))
+		return;
+	focus(c);
+	restack(selmon);
 }
 
 void
