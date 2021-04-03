@@ -243,7 +243,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
-static int getstatusbarpid();
+static pid_t getstatusbarpid();
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
@@ -345,8 +345,8 @@ static Systray *systray =  NULL;
 static const char broken[] = "broken";
 static char stext[1024];
 static int statussig;
-static int statuswidth;
-pid_t statusbarpid = 0;
+static int statusw;
+static pid_t statuspid = -1;
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static int bh, blw = 0;      /* bar geometry */
@@ -650,7 +650,7 @@ unswallow(Client *c)
 void
 buttonpress(XEvent *e)
 {
-	unsigned int i, x, click, occ = 0, stw = 0, statusx;
+	unsigned int i, x, click, occ = 0, stw = 0;
 	Arg arg = {0};
 	Client *c;
 	Monitor *m;
@@ -664,7 +664,7 @@ buttonpress(XEvent *e)
 		focus(NULL);
 	}
 
-	if(showsystray && m == systraytomon(m))
+	if (showsystray && m == systraytomon(m))
 		stw = getsystraywidth();
 
 	if (ev->window == selmon->barwin) {
@@ -682,32 +682,31 @@ buttonpress(XEvent *e)
 			arg.ui = 1 << i;
 		} else if (ev->x < x + blw)
 			click = ClkLtSymbol;
-		else if (ev->x > (statusx = selmon->ww - statuswidth - stw)) {
+		else if (ev->x > selmon->ww - statusw - stw) {
+			x = selmon->ww - statusw - stw;
 			click = ClkStatusText;
 
-			char *text = stext;
-			int i = -1;
-			char ch;
+			char *text, *s, ch;
 			statussig = 0;
-			while (text[++i] && statusx <= ev->x) {
-				if ((unsigned char)text[i] < ' ') {
-					ch = text[i];
-					text[i] = '\0';
-					statusx += TEXTW(text) - lrpad;
-					text[i] = ch;
-					text += i+1;
-					i = -1;
-					if (statusx >= ev->x) break;
+			for (text = s = stext; *s && x <= ev->x; s++) {
+				if ((unsigned char)(*s) < ' ') {
+					ch = *s;
+					*s = '\0';
+					x += TEXTW(text) - lrpad;
+					*s = ch;
+					text = s + 1;
+					if (x >= ev->x)
+						break;
 					statussig = ch;
-				} else if (text[i] == '^') {
-					text[i] = '\0';
-					statusx += TEXTW(text) - lrpad;
-					text[i] = '^';
-					if (text[++i] == 'f')
-						statusx += atoi(text + ++i);
-					while (text[i++] != '^');
-					text += i;
-					i = -1;
+				} else if (*s == '^') {
+					*s = '\0';
+					x += TEXTW(text) - lrpad;
+					*s = '^';
+					if (*(++s) == 'f')
+						x += atoi(++s);
+					while (*(s++) != '^');
+					text = s;
+					s--;
 				}
 			}
 		} else {
@@ -1172,7 +1171,7 @@ drawstatusbar(Monitor *m, int bh, char* stext)
 
 	w += 2; /* 1px padding on both sides */
 	ret = x = m->ww - w - stw;
-	statuswidth = w;
+	statusw = w;
 
 	drw_setscheme(drw, scheme[LENGTH(colors)]);
 	drw->scheme[ColFg] = scheme[SchemeNorm][ColFg];
@@ -1464,24 +1463,27 @@ getatomprop(Client *c, Atom prop)
 	return atom;
 }
 
-int
+pid_t
 getstatusbarpid()
 {
-	char buf[24], *cmd = "pidof -s "STATUSBAR;
+	char buf[32], *str = buf, *c;
 	FILE *fp;
-	if (statusbarpid) {
-		snprintf(buf, sizeof(buf), "/proc/%u/comm", statusbarpid);
+
+	if (statuspid > 0) {
+		snprintf(buf, sizeof(buf), "/proc/%u/cmdline", statuspid);
 		if ((fp = fopen(buf, "r"))) {
 			fgets(buf, sizeof(buf), fp);
+			while ((c = strchr(str, '/')))
+				str = c + 1;
 			fclose(fp);
-			if (!strncmp(buf, STATUSBAR, sizeof(STATUSBAR) - 1))
-				return statusbarpid;
+			if (strcmp(str, STATUSBAR))
+				return statuspid;
 		}
 	}
-	fp = popen(cmd, "r");
+	if (!(fp = popen("pidof -s "STATUSBAR, "r")))
+		return -1;
 	fgets(buf, sizeof(buf), fp);
-	pclose(fp);
-	return strtoul(buf, NULL, 10);
+	return pclose(fp) == 0 ? strtoul(buf, NULL, 10) : -1;
 }
 
 int
@@ -2569,10 +2571,12 @@ sigstatusbar(const Arg *arg)
 {
 	union sigval sv;
 	sv.sival_int = arg->i;
-	if (!(statusbarpid = getstatusbarpid()))
+	if (!statussig)
+		return;
+	if ((statuspid = getstatusbarpid()) <= 0)
 		return;
 
-	sigqueue(statusbarpid, SIGRTMIN+statussig, sv);
+	sigqueue(statuspid, SIGRTMIN+statussig, sv);
 }
 
 void
