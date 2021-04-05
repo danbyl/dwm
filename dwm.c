@@ -1483,7 +1483,8 @@ getstatusbarpid()
 	if (!(fp = popen("pidof -s "STATUSBAR, "r")))
 		return -1;
 	fgets(buf, sizeof(buf), fp);
-	return pclose(fp) == 0 ? strtoul(buf, NULL, 10) : -1;
+	pclose(fp);
+	return strtoul(buf, NULL, 10);
 }
 
 int
