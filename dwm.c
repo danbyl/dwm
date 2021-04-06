@@ -287,6 +287,7 @@ static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
+static void shiftview(const Arg *arg);
 static void show(Client *c);
 static void showhide(Client *c);
 static void sigchld(int unused);
@@ -2528,6 +2529,38 @@ seturgent(Client *c, int urg)
 	wmh->flags = urg ? (wmh->flags | XUrgencyHint) : (wmh->flags & ~XUrgencyHint);
 	XSetWMHints(dpy, c->win, wmh);
 	XFree(wmh);
+}
+
+void
+shiftview(const Arg *arg)
+{
+	Arg shifted;
+	Client *c;
+	unsigned int tagmask = 0;
+
+	for (c = selmon->clients; c; c = c->next)
+		tagmask |= c->tags;
+
+	shifted.ui = selmon->tagset[selmon->seltags];
+	for (int i = 0; i < LENGTH(tags); i++) {
+		if (shifted.ui & 1 << i) {
+			shifted.ui &= 1 << i;
+			break;
+		}
+	}
+
+	if (arg->i > 0) // left circular shift
+		do {
+			shifted.ui = (shifted.ui << arg->i)
+				| (shifted.ui >> (LENGTH(tags) - arg->i));
+		} while (tagmask && !(shifted.ui & tagmask));
+	else // right circular shift
+		do {
+			shifted.ui = (shifted.ui >> -arg->i)
+				| (shifted.ui << (LENGTH(tags) + arg->i));
+		} while (tagmask && !(shifted.ui & tagmask));
+
+	view(&shifted);
 }
 
 void
