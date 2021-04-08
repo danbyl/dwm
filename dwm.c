@@ -862,11 +862,14 @@ clientmessage(XEvent *e)
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
 		for (i = 0; i < LENGTH(tags) && !((1 << i) & c->tags); i++);
 		if (i < LENGTH(tags)) {
-			const Arg a = {.ui = 1 << i};
-			selmon = c->mon;
-			view(&a);
-			focus(c);
-			restack(selmon);
+			if (!ISVISIBLE(c)) {
+				selmon = c->mon;
+				const Arg a = {.ui = 1 << i};
+				view(&a);
+				focus(c);
+				restack(selmon);
+				XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w / 2, c->h / 2);
+			}
 		}
 	}
 }
