@@ -20,9 +20,6 @@ static void (*attach)(Client *c) = attachmaster; /* attachmaster, attachabove, a
 static const char *fonts[] = {
 	"monospace:size=12",
 	"Noto Color Emoji:pixelsize=12:antialias=true:autohint=true",
-	"JoyPixels:pixelsize=12:antialias=true:autohint=true",
-	"Font Awesome:size=20:antialias=true:autohint=true",
-	"Symbola:size=12",
 };
 static const char dmenufont[] = "monospace:size=12";
 static const char dmenufontlarge[] = "monospace:size=16";
@@ -130,7 +127,7 @@ static ResourcePref resources[] = {
 #include "movestack.c"
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ MODKEY|ShiftMask,             XK_d,      spawn,          {.v = dmenucmd } },
+	{ MODKEY,                       XK_d,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_s,      spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
