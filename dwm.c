@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <wordexp.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -243,6 +244,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
+static void freerules(Rule *rules, int rulecount);
 static pid_t getstatusbarpid();
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
@@ -255,6 +257,7 @@ static void hide(Client *c);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
+static void load_rules(const Arg *arg);
 static void load_xresources(void);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
@@ -263,10 +266,12 @@ static void monocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c);
+static Rule *parserules(const char *path, int *newcount);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
+static char *readquotedstr(const char *str);
 static void removesystrayicon(Client *i);
 static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizebarwin(Monitor *m);
@@ -392,6 +397,8 @@ static xcb_connection_t *xcon;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
+static int rulecount = LENGTH(defaultrules);
+static Rule *rules = defaultrules;
 
 struct Pertag {
 	unsigned int curtag, prevtag; /* current and previous tag */
@@ -422,7 +429,7 @@ applyrules(Client *c)
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
 
-	for (i = 0; i < LENGTH(rules); i++) {
+	for (i = 0; i < rulecount; i++) {
 		r = &rules[i];
 		if ((!r->title || strstr(c->name, r->title))
 		&& (!r->class || strstr(class, r->class))
@@ -1674,6 +1681,38 @@ killclient(const Arg *arg)
 }
 
 void
+freerules(Rule *rules, int rulecount)
+{
+	for (int i = 0; i < rulecount; i++) {
+		if (rules[i].class)
+			free((char *)rules[i].class);
+		if (rules[i].instance)
+			free((char *)rules[i].instance);
+		if (rules[i].title)
+			free((char *)rules[i].title);
+	}
+	free(rules);
+}
+
+void
+load_rules(const Arg *arg)
+{
+	int newcount;
+	wordexp_t exp;
+	Rule *newrules;
+
+	if (wordexp(rulespath, &exp, WRDE_NOCMD))
+		return;
+
+	newrules = parserules(*exp.we_wordv, &newcount);
+	wordfree(&exp);
+	if (rules != defaultrules)
+		freerules(rules, rulecount);
+	rules = newrules ? newrules : defaultrules;
+	rulecount = newrules ? newcount : LENGTH(defaultrules);
+}
+
+void
 load_xresources(void)
 {
 	Display *display;
@@ -1919,6 +1958,95 @@ nexttiled(Client *c)
 	return c;
 }
 
+Rule
+*parserules(const char *path, int *newcount)
+{
+	int i = -1, size = 0;
+	char buf[256], *key, *str, *c;
+	Rule *rules = NULL, *tmprules;
+	FILE *fp = fopen(path, "r");
+
+	if (!fp)
+		return NULL;
+
+	for (;;) {
+		if (!(str = fgets(buf, sizeof(buf), fp)))
+			break;
+
+		switch (str[0]) {
+		case '-':
+			str++;
+			i++;
+			if (i >= size) {
+				size = (i + 1) * 2;
+				tmprules = reallocarray(rules, size, sizeof(Rule));
+				if (!tmprules) {
+					fprintf(stderr, "parserules: failed to reallocate rule array to size %d\n", size);
+					i--;
+					goto error;
+				}
+				rules = tmprules;
+			}
+			memset(&rules[i], 0, sizeof(Rule));
+			rules[i].monitor = -1;
+			break;
+		case '#': case '\n': case '\0':
+			continue;
+		default:
+			if (i < 0)
+				continue;
+			break;
+		}
+
+		while (str[0] && str[0] == ' ')
+			str++;
+		key = strsep(&str, ": \n");
+		if (!key)
+			continue;
+
+		while (str[0] && str[0] == ' ')
+			str++;
+		if ((c = strchr(str, '\n')))
+			*c = '\0';
+		if (!str[0]) {
+			fprintf(stderr, "parserules: missing value for key '%s'\n", key);
+			goto error;
+		}
+
+		if (strcasecmp(key, "class") == 0)
+			rules[i].class = readquotedstr(str);
+		else if (strcasecmp(key, "instance") == 0)
+			rules[i].instance = readquotedstr(str);
+		else if (strcasecmp(key, "title") == 0)
+			rules[i].title = readquotedstr(str);
+		else if (strcasecmp(key, "tag") == 0)
+			rules[i].tags = 1 << (strtol(str, NULL, 10) - 1);
+		else if (strcasecmp(key, "monitor") == 0)
+			rules[i].monitor = strtol(str, NULL, 10);
+		else if (strcasecmp(key, "floating") == 0)
+			rules[i].isfloating = strcasecmp(str, "true") ? 0 : 1;
+		else if (strcasecmp(key, "terminal") == 0)
+			rules[i].isterminal = strcasecmp(str, "true") ? 0 : 1;
+		else if (strcasecmp(key, "swallow") == 0)
+			rules[i].noswallow = strcasecmp(str, "false") ? 0 : 1;
+		else if (!(key[0] == '#'))
+			fprintf(stderr, "parserules: unknown key: '%s'\n", key);
+	}
+
+	fclose(fp);
+	if (i) {
+		*newcount = i + 1;
+		return rules;
+	} else {
+		return NULL;
+	}
+error:
+	if (rules)
+		freerules(rules, i + 1);
+	fclose(fp);
+	return NULL;
+}
+
 void
 pop(Client *c)
 {
@@ -1994,6 +2122,33 @@ recttomon(int x, int y, int w, int h)
 			r = m;
 		}
 	return r;
+}
+
+char *
+readquotedstr(const char *str)
+{
+	char buf[256], quote = str[0];
+	int i, j;
+
+	if (quote != '\'' && quote != '"')
+		quote = -1;
+
+	for (i = 1, j = 0; str[i]; i++) {
+		if (str[i] == quote)
+			break;
+		else if (str[i] == '\\') {
+			if (str[i+1] == quote) {
+				buf[j++] = quote;
+				i++;
+			} else {
+				buf[j++] = '\\';
+			}
+		} else {
+			buf[j++] = str[i];
+		}
+	}
+	buf[j] = '\0';
+	return strdup(buf);
 }
 
 void
@@ -3522,6 +3677,7 @@ main(int argc, char *argv[])
 	checkotherwm();
 	XrmInitialize();
 	load_xresources();
+	load_rules(NULL);
 	setup();
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath proc exec", NULL) == -1)
