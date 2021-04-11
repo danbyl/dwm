@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <wordexp.h>
@@ -257,7 +258,7 @@ static void hide(Client *c);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
-static void load_rules(const Arg *arg);
+static void load_rules();
 static void load_xresources(void);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
@@ -399,6 +400,7 @@ static xcb_connection_t *xcon;
 #include "config.h"
 static int rulecount = LENGTH(defaultrules);
 static Rule *rules = defaultrules;
+static struct stat rulestat;
 
 struct Pertag {
 	unsigned int curtag, prevtag; /* current and previous tag */
@@ -428,6 +430,8 @@ applyrules(Client *c)
 	XGetClassHint(dpy, c->win, &ch);
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
+
+	load_rules();
 
 	for (i = 0; i < rulecount; i++) {
 		r = &rules[i];
@@ -1695,17 +1699,27 @@ freerules(Rule *rules, int rulecount)
 }
 
 void
-load_rules(const Arg *arg)
+load_rules()
 {
 	int newcount;
-	wordexp_t exp;
-	Rule *newrules;
+	Rule *newrules = NULL;
+	struct stat newrulestat;
 
-	if (wordexp(rulespath, &exp, WRDE_NOCMD))
-		return;
+	if (stat(rulespath, &newrulestat) < 0) {
+		if (errno != ENOENT)
+			return;
+	} else {
+		if (newrulestat.st_mtim.tv_sec > rulestat.st_mtim.tv_sec
+	    || (newrulestat.st_mtim.tv_sec == rulestat.st_mtim.tv_sec
+	    && (newrulestat.st_mtim.tv_nsec > rulestat.st_mtim.tv_nsec))) {
+			newrules = parserules(rulespath, &newcount);
+			memcpy(&rulestat, &newrulestat, sizeof(struct stat));
+		} else {
+			memcpy(&rulestat, &newrulestat, sizeof(struct stat));
+			return;
+		}
+	}
 
-	newrules = parserules(*exp.we_wordv, &newcount);
-	wordfree(&exp);
 	if (rules != defaultrules)
 		freerules(rules, rulecount);
 	rules = newrules ? newrules : defaultrules;
@@ -2383,7 +2397,11 @@ scan(void)
 void
 sendmon(Client *c, Monitor *m)
 {
+	const char *class, *instance;
+	const Rule *r;
+	XClassHint ch = { NULL, NULL };
 	int matchedtagrule = 0;
+
 	if (c->mon == m)
 		return;
 	unfocus(c, 1);
@@ -2391,12 +2409,12 @@ sendmon(Client *c, Monitor *m)
 	detachstack(c);
 	c->mon = m;
 
-	const char *class, *instance;
-	const Rule *r;
-	XClassHint ch = { NULL, NULL };
 	XGetClassHint(dpy, c->win, &ch);
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
+
+	load_rules();
+
 	for (int i = 0; i < rulecount; i++) {
 		r = &rules[i];
 		if ((!r->title || strstr(c->name, r->title))
@@ -3677,7 +3695,14 @@ main(int argc, char *argv[])
 	checkotherwm();
 	XrmInitialize();
 	load_xresources();
-	load_rules(NULL);
+
+	wordexp_t exp;
+	if (!wordexp(rulespath, &exp, WRDE_NOCMD)) {
+		if (!(rulespath = strdup(*exp.we_wordv)))
+			die("malloc");
+		wordfree(&exp);
+	}
+	load_rules();
 	setup();
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath proc exec", NULL) == -1)

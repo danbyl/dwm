@@ -50,7 +50,7 @@ static Rule defaultrules[] = {
 	/* class      instance    title       tags mask     isfloating   isterminal noswallow monitor */
 	{ "St",       NULL,       NULL,       0,            0,           1,         0,        -1 },
 };
-static const char *rulespath = "~/.config/dwm/rules.yml";
+static char *rulespath = "~/.config/dwm/rules.yml";
 
 /* layout(s) */
 static float mfact     = 0.50; /* factor of master area size [0.05..0.95] */

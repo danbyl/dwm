@@ -49,8 +49,6 @@ static const DmenuArg actionarg = {
 				}
 			}
 		}, {
-			.name = "reload rules",      .func = load_rules
-		}, {
 			.name = "reload xresources", .func = xrdb
 		}, {
 			.name = "set master factor",
