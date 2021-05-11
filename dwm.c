@@ -2450,14 +2450,6 @@ sendmon(Client *c, Monitor *m)
 	if (ch.res_name)
 		XFree(ch.res_name);
 
-	/* FIXME: I don't know why this works or why it's 'required', but without this,
-	 * windows sometimes freeze when being sent to other monitors, which could
-	 * be fixed by resizing with the mouse, which calls the resize function.
-	 * There's probably a better way of fixing this issue. This doesn't always
-	 * seem to work either.
-	 */
-	resize(c, c->x, c->y, c->w, c->h, 1);
-
 	attach(c);
 	attachstack(c);
 	focus(NULL);
