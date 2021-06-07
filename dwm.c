@@ -1981,8 +1981,8 @@ nexttiled(Client *c)
 	return c;
 }
 
-Rule
-*parserules(const char *path, int *newcount)
+Rule *
+parserules(const char *path, int *newcount)
 {
 	int i = -1, size = 0;
 	char buf[256], *key, *str, *c;
@@ -3664,7 +3664,6 @@ systraytomon(Monitor *m)
 		return mons;
 	return t;
 }
-
 
 void
 zoom(const Arg *arg)
