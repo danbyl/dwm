@@ -211,6 +211,8 @@ struct DmenuArg {
 	int strarg; /* if set, func will be called with arg.v = dmenu output string */
 };
 
+enum Side { North = 1, South = 2, East = 4, West = 8 };
+
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
@@ -331,6 +333,7 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
+static void warpsides(Client *c, int sides);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static Client *wintosystrayicon(Window w);
@@ -2228,7 +2231,9 @@ resizeclient(Client *c, int x, int y, int w, int h)
 void
 resizemouse(const Arg *arg)
 {
-	int ocx, ocy, nw, nh, effectivegapsize;
+	int ocx, ocy, nx, ny, nw, nh, effectivegapsize = gapsize * (enablegaps != 0), sides = 0, di;
+	unsigned int dui;
+	Window dummy;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -2241,10 +2246,16 @@ resizemouse(const Arg *arg)
 	restack(selmon);
 	ocx = c->x;
 	ocy = c->y;
+	if (XQueryPointer(dpy, c->win, &dummy, &dummy, &di, &di, &nx, &ny, &dui) == False)
+		return;
+	sides |= nx < c->w / 3 ? West : nx >= 2 * c->w / 3 ? East : 0;
+	sides |= ny < c->h / 3 ? North : ny >= 2 * c->h / 3 ? South : 0;
+	if (!sides)
+		return;
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
 		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
 		return;
-	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
+	warpsides(c, sides);
 	do {
 		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
 		switch(ev.type) {
@@ -2258,17 +2269,45 @@ resizemouse(const Arg *arg)
 				continue;
 			lasttime = ev.xmotion.time;
 
-			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
-			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
-			effectivegapsize = gapsize * (enablegaps != 0);
-			if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw + effectivegapsize)) < snap)
-				nw = selmon->wx + selmon->ww - c->x - 2 * c->bw - effectivegapsize;
-			else if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw)) < snap)
-				nw = selmon->wx + selmon->ww - c->x - 2 * c->bw;
-			if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw + effectivegapsize)) < snap)
-				nh = selmon->wy + selmon->wh - c->y - 2 * c->bw - effectivegapsize;
-			else if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw)) < snap)
-				nh = selmon->wy + selmon->wh - c->y - 2 * c->bw;
+			nx = sides & West ? ev.xmotion.x : c->x;
+			ny = sides & North ? ev.xmotion.y : c->y;
+			nw = c->w;
+			nh = c->h;
+
+			if (sides & North) {
+				nh = MAX(c->h - (ev.xmotion.y - c->y), 1);
+				if (abs(selmon->wy + effectivegapsize - ny) < snap) {
+					nh += ny - (selmon->wy + effectivegapsize);
+					ny = selmon->wy + effectivegapsize;
+				}
+				else if (abs(selmon->wy - ny) < snap) {
+					nh += ny - selmon->wy;
+					ny = selmon->wy;
+				}
+			} else if (sides & South) {
+				nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
+				if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw + effectivegapsize)) < snap)
+					nh = selmon->wy + selmon->wh - c->y - 2 * c->bw - effectivegapsize;
+				else if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw)) < snap)
+					nh = selmon->wy + selmon->wh - c->y - 2 * c->bw;
+			}
+			if (sides & East) {
+				nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
+				if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw + effectivegapsize)) < snap)
+					nw = selmon->wx + selmon->ww - c->x - 2 * c->bw - effectivegapsize;
+				else if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw)) < snap)
+					nw = selmon->wx + selmon->ww - c->x - 2 * c->bw;
+			} else if (sides & West) {
+				nw = MAX(c->w - (ev.xmotion.x - c->x), 1);
+				if (abs(selmon->wx + effectivegapsize - nx) < snap) {
+					nw += nx - (selmon->wx + effectivegapsize);
+					nx = selmon->wx + effectivegapsize;
+				}
+				else if (abs(selmon->wx - nx) < snap) {
+					nw += nx - selmon->wx;
+					nx = selmon->wx;
+				}
+			}
 			if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
 			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
 			{
@@ -2277,11 +2316,11 @@ resizemouse(const Arg *arg)
 					togglefloating(NULL);
 			}
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
-				resize(c, c->x, c->y, nw, nh, 1);
+				resize(c, nx, ny, nw, nh, 1);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
-	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
+	warpsides(c, sides);
 	XUngrabPointer(dpy, CurrentTime);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
@@ -3570,6 +3609,14 @@ swallowingclient(Window w)
 	}
 
 	return NULL;
+}
+
+void
+warpsides(Client *c, int sides)
+{
+	int x = sides & West ? -c->bw : sides & East ? c->w + c->bw - 1 : c->w / 2;
+	int y = sides & North ? -c->bw : sides & South ? c->h + c->bw - 1 : c->h / 2;
+	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, x, y);
 }
 
 Client *
