@@ -403,7 +403,6 @@ static xcb_connection_t *xcon;
 #include "config.h"
 static int rulecount = LENGTH(defaultrules);
 static Rule *rules = defaultrules;
-static struct stat rulestat;
 
 struct Pertag {
 	unsigned int curtag, prevtag; /* current and previous tag */
@@ -1714,28 +1713,21 @@ void
 load_rules()
 {
 	int newcount;
-	Rule *newrules = NULL;
-	struct stat newrulestat;
+	Rule *newrules;
+	static struct stat rulestat;
+	int oldtime = rulestat.st_mtime;
 
-	if (stat(rulespath, &newrulestat) < 0) {
-		if (errno != ENOENT)
-			return;
-	} else {
-		if (newrulestat.st_mtim.tv_sec > rulestat.st_mtim.tv_sec
-	    || (newrulestat.st_mtim.tv_sec == rulestat.st_mtim.tv_sec
-	    && (newrulestat.st_mtim.tv_nsec > rulestat.st_mtim.tv_nsec))) {
-			newrules = parserules(rulespath, &newcount);
-			memcpy(&rulestat, &newrulestat, sizeof(struct stat));
-		} else {
-			memcpy(&rulestat, &newrulestat, sizeof(struct stat));
-			return;
-		}
+	if (stat(rulespath, &rulestat) < 0)
+		return;
+
+	if (rulestat.st_mtime != oldtime) {
+		newrules = parserules(rulespath, &newcount);
+
+		if (rules != defaultrules)
+			freerules(rules, rulecount);
+		rules = newrules ? newrules : defaultrules;
+		rulecount = newrules ? newcount : LENGTH(defaultrules);
 	}
-
-	if (rules != defaultrules)
-		freerules(rules, rulecount);
-	rules = newrules ? newrules : defaultrules;
-	rulecount = newrules ? newcount : LENGTH(defaultrules);
 }
 
 void
