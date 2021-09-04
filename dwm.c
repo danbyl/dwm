@@ -1958,15 +1958,15 @@ movemouse(const Arg *arg)
 				togglefloating(NULL);
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 				resize(c, nx, ny, c->w, c->h, 1);
+			if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
+				sendmon(c, m);
+				selmon = m;
+				focus(NULL);
+			}
 			break;
 		}
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
-	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
-		sendmon(c, m);
-		selmon = m;
-		focus(NULL);
-	}
 }
 
 Client *
