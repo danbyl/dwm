@@ -118,7 +118,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, issticky, issteam;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, issticky, issteam, borderless;
 	unsigned int icw, ich; Picture icon;
 	pid_t pid;
 	Client *next;
@@ -176,6 +176,7 @@ typedef struct {
 	int isterminal;
 	int noswallow;
 	int monitor;
+	int borderless;
 } Rule;
 
 /* Xresources preferences */
@@ -451,6 +452,7 @@ applyrules(Client *c)
 			c->isterminal = r->isterminal;
 			c->isfloating = r->isfloating;
 			c->noswallow  = r->noswallow;
+			c->borderless  = r->borderless;
 			c->tags |= r->tags;
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
@@ -1868,7 +1870,7 @@ manage(Window w, XWindowAttributes *wa)
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
 		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
-	c->bw = c->mon->borderpx;
+	c->bw = c->borderless ? 0 : c->mon->borderpx;
 
 	wc.border_width = c->bw;
 	if (c->x == selmon->wx) c->x += (c->mon->ww - WIDTH(c)) / 2 - c->bw;
@@ -2115,6 +2117,8 @@ parserules(const char *path, int *newcount)
 			rules[i].isterminal = strcasecmp(str, "true") ? 0 : 1;
 		else if (strcasecmp(key, "swallow") == 0)
 			rules[i].noswallow = strcasecmp(str, "false") ? 0 : 1;
+		else if (strcasecmp(key, "borderless") == 0)
+			rules[i].borderless = strcasecmp(str, "true") ? 0 : 1;
 		else if (!(key[0] == '#'))
 			fprintf(stderr, "parserules: unknown key: '%s'\n", key);
 	}
@@ -2995,6 +2999,8 @@ toggleborders(const Arg *arg)
 
 	for (c = selmon->clients; c; c = c->next)
 	{
+		if (c->borderless)
+			continue;
 		c->bw = selmon->borderpx;
 		if (c->isfloating || !selmon->lt[selmon->sellt]->arrange)
 		{

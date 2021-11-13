@@ -49,8 +49,8 @@ static Rule defaultrules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class      instance    title       tags mask     isfloating   isterminal noswallow monitor */
-	{ "St",       NULL,       NULL,       0,            0,           1,         0,        -1 },
+	/* class      instance    title       tags mask     isfloating   isterminal noswallow monitor borderless */
+	{ "St",       NULL,       NULL,       0,            0,           1,         0,        -1,     0 },
 };
 static char *rulespath = "~/.config/dwm/rules.yml";
 
