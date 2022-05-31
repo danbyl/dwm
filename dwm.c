@@ -22,6 +22,7 @@
  */
 #include <errno.h>
 #include <locale.h>
+#include <regex.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -168,9 +169,17 @@ struct Monitor {
 };
 
 typedef struct {
-	const char *class;
-	const char *instance;
-	const char *title;
+	int isregex;
+	union {
+		const char *str;
+		regex_t *regex;
+	} pat;
+} RulePattern;
+
+typedef struct {
+	RulePattern class;
+	RulePattern instance;
+	RulePattern title;
 	unsigned int tags;
 	int isfloating;
 	int isterminal;
@@ -269,16 +278,17 @@ static void load_xresources(void);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
+static int matchrule(const Rule *r, const char *title, const char *class, const char *instance);
 static void monocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c);
+static void parsepattern(RulePattern *dest, const char *str);
 static Rule *parserules(const char *path, int *newcount);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
-static char *readquotedstr(const char *str);
 static void removesystrayicon(Client *i);
 static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizebarwin(Monitor *m);
@@ -445,10 +455,7 @@ applyrules(Client *c)
 
 	for (i = 0; i < rulecount; i++) {
 		r = &rules[i];
-		if ((!r->title || strstr(c->name, r->title))
-		&& (!r->class || strstr(class, r->class))
-		&& (!r->instance || strstr(instance, r->instance)))
-		{
+		if (matchrule(r, c->name, class, instance)) {
 			c->isterminal = r->isterminal;
 			c->isfloating = r->isfloating;
 			c->noswallow  = r->noswallow;
@@ -1768,12 +1775,25 @@ void
 freerules(Rule *rules, int rulecount)
 {
 	for (int i = 0; i < rulecount; i++) {
-		if (rules[i].class)
-			free((char *)rules[i].class);
-		if (rules[i].instance)
-			free((char *)rules[i].instance);
-		if (rules[i].title)
-			free((char *)rules[i].title);
+		Rule *r = &rules[i];
+		if (r->class.isregex) {
+			regfree(r->class.pat.regex);
+			free(r->class.pat.regex);
+		} else if (r->class.pat.str) {
+			free((char *)r->class.pat.str);
+		}
+		if (r->instance.isregex) {
+			regfree(r->instance.pat.regex);
+			free(r->instance.pat.regex);
+		} else if (r->instance.pat.str) {
+			free((char *)r->instance.pat.str);
+		}
+		if (r->title.isregex) {
+			regfree(r->title.pat.regex);
+			free(r->title.pat.regex);
+		} else if (r->title.pat.str) {
+			free((char *)r->title.pat.str);
+		}
 	}
 	free(rules);
 }
@@ -1938,6 +1958,18 @@ maprequest(XEvent *e)
 		manage(ev->window, &wa);
 }
 
+int
+matchpattern(const RulePattern *r, const char *pat)
+{
+	return r->isregex ? !regexec(r->pat.regex, pat, 0, NULL, 0) : (!r->pat.str || strstr(pat, r->pat.str));
+}
+
+int
+matchrule(const Rule *r, const char *title, const char *class, const char *instance)
+{
+	return matchpattern(&r->title, title) && matchpattern(&r->class, class) && matchpattern(&r->instance, instance);
+}
+
 void
 monocle(Monitor *m)
 {
@@ -2046,6 +2078,66 @@ nexttiled(Client *c)
 	return c;
 }
 
+void
+parsepattern(RulePattern *dest, const char *str)
+{
+	char buf[256], quote = -1;
+	int i, j, rc;
+
+	if (dest->pat.str || dest->pat.regex)
+		return;
+
+	if (*str == '\'' || *str == '"' || *str == '/')
+		quote = *str++;
+
+	for (i = 0, j = 0; str[i] && j < sizeof(buf) - 1; i++) {
+		if (str[i] == quote) {
+			if (str[i+1] == quote) {
+				buf[j++] = str[++i];
+				continue;
+			} else {
+				break;
+			}
+		}
+		if (str[i] == '\\' && quote != '\'') {
+			if (str[i+1] == quote || (str[i+1] == '#' && quote == '/')) {
+				buf[j++] = str[++i];
+			} else {
+				buf[j++] = '\\';
+			}
+		} else {
+			buf[j++] = str[i];
+		}
+	}
+	if (j == 0) {
+		dest->isregex = 0;
+		dest->pat.str = NULL;
+		return;
+	}
+	buf[j] = '\0';
+
+	if (quote == '/') {
+		dest->pat.regex = malloc(sizeof(regex_t));
+		if (!dest->pat.regex) {
+			perror("dwm: rules");
+			dest->isregex = 0;
+			dest->pat.str = NULL;
+		} else if ((rc = regcomp(dest->pat.regex, buf, REG_NOSUB | REG_EXTENDED))) {
+			free(dest->pat.regex);
+			fprintf(stderr, "dwm: rules: failed to compile regex '%s': ", buf);
+			regerror(rc, dest->pat.regex, buf, sizeof(buf));
+			fprintf(stderr, "%s\n", buf);
+			dest->isregex = 0;
+			dest->pat.str = NULL;
+		} else {
+			dest->isregex = 1;
+		}
+	} else {
+		dest->isregex = 0;
+		dest->pat.str = strdup(buf);
+	}
+}
+
 Rule *
 parserules(const char *path, int *newcount)
 {
@@ -2061,78 +2153,87 @@ parserules(const char *path, int *newcount)
 		if (!(str = fgets(buf, sizeof(buf), fp)))
 			break;
 
-		switch (str[0]) {
-		case '-':
-			str++;
-			i++;
-			if (i >= size) {
-				size = (i + 1) * 2;
-				tmprules = reallocarray(rules, size, sizeof(Rule));
-				if (!tmprules) {
-					fprintf(stderr, "parserules: failed to reallocate rule array to size %d\n", size);
-					i--;
-					goto error;
-				}
-				rules = tmprules;
-			}
-			memset(&rules[i], 0, sizeof(Rule));
-			rules[i].monitor = -1;
-			break;
-		case '#': case '\n': case '\0':
-			continue;
-		default:
-			if (i < 0)
-				continue;
-			break;
-		}
-
-		while (str[0] && str[0] == ' ')
-			str++;
-		key = strsep(&str, ": \n");
-		if (!key)
-			continue;
-
-		while (str[0] && str[0] == ' ')
-			str++;
 		if ((c = strchr(str, '\n')))
 			*c = '\0';
-		if (!str[0]) {
-			fprintf(stderr, "parserules: missing value for key '%s'\n", key);
-			goto error;
+
+		str += strspn(str, " ");
+		if (*str == '#' || *str == '\0' || (*str != '-' && i < 0))
+			continue;
+
+		if (*str == '-') {
+			++str;
+			str += strspn(str, " ");
+			if (++i >= size) {
+				size = (i + 1) * 2;
+				tmprules = calloc(size, sizeof(Rule));
+				if (!tmprules) {
+					perror("dwm: rules");
+					goto error;
+				}
+				if (rules) {
+					memcpy(tmprules, rules, i * sizeof(Rule));
+					free(rules);
+				}
+				for (int j = i; j < size; ++j)
+					tmprules[j].monitor = -1;
+				rules = tmprules;
+			}
 		}
 
-		if (strcasecmp(key, "class") == 0)
-			rules[i].class = readquotedstr(str);
-		else if (strcasecmp(key, "instance") == 0)
-			rules[i].instance = readquotedstr(str);
-		else if (strcasecmp(key, "title") == 0)
-			rules[i].title = readquotedstr(str);
-		else if (strcasecmp(key, "tag") == 0)
-			rules[i].tags = 1 << (strtol(str, NULL, 10) - 1);
-		else if (strcasecmp(key, "monitor") == 0)
-			rules[i].monitor = strtol(str, NULL, 10);
-		else if (strcasecmp(key, "floating") == 0)
-			rules[i].isfloating = strcasecmp(str, "true") ? 0 : 1;
-		else if (strcasecmp(key, "terminal") == 0)
-			rules[i].isterminal = strcasecmp(str, "true") ? 0 : 1;
-		else if (strcasecmp(key, "swallow") == 0)
-			rules[i].noswallow = strcasecmp(str, "false") ? 0 : 1;
-		else if (strcasecmp(key, "borderless") == 0)
-			rules[i].borderless = strcasecmp(str, "true") ? 0 : 1;
-		else if (!(key[0] == '#'))
-			fprintf(stderr, "parserules: unknown key: '%s'\n", key);
+		key = str;
+		str = strstr(str, ": ");
+		if (!str) {
+			fprintf(stderr, "dwm: rules: invalid rule entry: %s\n", buf);
+			goto error;
+		}
+		*str = '\0';
+		str += 2 + strspn(str + 2, " ");
+
+		if (*str != '\'' && *str != '"') {
+			if ((c = strstr(str, " #")))
+				*c = '\0';
+			for (c = strrchr(str, ' '); c && c >= str; --c) {
+				if (*c != ' ')
+					break;
+				*c = '\0';
+			}
+		}
+
+		Rule *r = &rules[i];
+		if (strcasecmp(key, "class") == 0) {
+			parsepattern(&r->class, str);
+		} else if (strcasecmp(key, "instance") == 0) {
+			parsepattern(&r->instance, str);
+		} else if (strcasecmp(key, "title") == 0) {
+			parsepattern(&r->title, str);
+		} else if (strcasecmp(key, "tag") == 0) {
+			int tag = strtoul(str, &c, 10);
+			if (c == str || tag > LENGTH(tags))
+				fprintf(stderr, "dwm: rules: invalid tag: %s\n", str);
+			else
+				r->tags = 1 << (tag - 1);
+		} else if (strcasecmp(key, "monitor") == 0) {
+			int monitor = strtol(str, &c, 10);
+			if (c != str)
+				r->monitor = monitor;
+		} else if (strcasecmp(key, "floating") == 0) {
+			r->isfloating = strcasecmp(str, "true") ? 0 : 1;
+		} else if (strcasecmp(key, "terminal") == 0) {
+			r->isterminal = strcasecmp(str, "true") ? 0 : 1;
+		} else if (strcasecmp(key, "swallow") == 0) {
+			r->noswallow = strcasecmp(str, "false") ? 0 : 1;
+		} else if (strcasecmp(key, "borderless") == 0) {
+			r->borderless = strcasecmp(str, "true") ? 0 : 1;
+		}
 	}
 
 	fclose(fp);
-	if (i) {
+	if (i)
 		*newcount = i + 1;
-		return rules;
-	} else {
-		return NULL;
-	}
+	return rules;
 error:
 	if (rules)
-		freerules(rules, i + 1);
+		freerules(rules, i);
 	fclose(fp);
 	return NULL;
 }
@@ -2217,33 +2318,6 @@ recttomon(int x, int y, int w, int h)
 			r = m;
 		}
 	return r;
-}
-
-char *
-readquotedstr(const char *str)
-{
-	char buf[256], quote = str[0];
-	int i, j;
-
-	if (quote != '\'' && quote != '"')
-		quote = -1;
-
-	for (i = 1, j = 0; str[i]; i++) {
-		if (str[i] == quote)
-			break;
-		else if (str[i] == '\\') {
-			if (str[i+1] == quote) {
-				buf[j++] = quote;
-				i++;
-			} else {
-				buf[j++] = '\\';
-			}
-		} else {
-			buf[j++] = str[i];
-		}
-	}
-	buf[j] = '\0';
-	return strdup(buf);
 }
 
 void
@@ -2534,10 +2608,7 @@ sendmon(Client *c, Monitor *m)
 
 	for (int i = 0; i < rulecount; i++) {
 		r = &rules[i];
-		if ((!r->title || strstr(c->name, r->title))
-		&& (!r->class || strstr(class, r->class))
-		&& (!r->instance || strstr(instance, r->instance)))
-		{
+		if (matchrule(r, c->name, class, instance)) {
 			if (r->tags) {
 				matchedtagrule = 1;
 				c->isfloating = r->isfloating;
