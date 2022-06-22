@@ -2242,7 +2242,7 @@ void
 pop(Client *c)
 {
 	detach(c);
-	attach(c);
+	attachmaster(c);
 	focus(c);
 	arrange(c->mon);
 }
