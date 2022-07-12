@@ -1909,7 +1909,10 @@ manage(Window w, XWindowAttributes *wa)
 		XRaiseWindow(dpy, c->win);
 		attachbottom(c);
 	} else {
-		attach(c);
+		if (c->mon->lt[c->mon->sellt]->arrange == monocle)
+			attachbottom(c);
+		else
+			attach(c);
 	}
 	attachstack(c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
@@ -2629,7 +2632,10 @@ sendmon(Client *c, Monitor *m)
 	if (ch.res_name)
 		XFree(ch.res_name);
 
-	attach(c);
+	if (c->mon->lt[c->mon->sellt]->arrange == monocle)
+		attachbottom(c);
+	else
+		attach(c);
 	attachstack(c);
 	focus(NULL);
 	arrange(NULL);
@@ -3374,7 +3380,10 @@ updategeom(void)
 					m->clients = c->next;
 					detachstack(c);
 					c->mon = mons;
-					attach(c);
+					if (c->mon->lt[c->mon->sellt]->arrange == monocle)
+						attachbottom(c);
+					else
+						attach(c);
 					attachstack(c);
 				}
 				if (m == selmon)
