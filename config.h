@@ -5,7 +5,7 @@ static unsigned int borderpx = 2;        /* border pixel of windows */
 static unsigned int snap     = 12;       /* snap pixel */
 static unsigned int gapsize  = 15;       /* gap size */
 static int enablegaps        = 0;
-static int swallowing        = 1;        /* swallowing enabled/disabled */
+static int swallowing        = 0;        /* swallowing enabled/disabled */
 static int swallowfloating   = 0;        /* 1 means swallow floating windows by default */
 static int smartgaps         = 0;        /* 1 means no outer gap when there is only one window */
 static const unsigned int systraypinning = 2;     /* 0: sloppy systray follows selected monitor, >0: pin systray to monitor X */
@@ -34,6 +34,8 @@ static char selbgcolor[]      = "#005577";
 static char hidfgcolor[]      = "#ff0000";
 static char hidbordercolor[]  = "#080808";
 static char hidbgcolor[]      = "#080808";
+static char matchselbgcolor[] = "#005577";
+static char dmenuselbgcolor[] = "#222222";
 static char *colors[][3] = {
 	/*               fg           bg           border   */
 	[SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
@@ -95,7 +97,7 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufontlarge, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbgcolor, "-sf", selfgcolor, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufontlarge, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", dmenuselbgcolor, "-sf", selfgcolor, "-shb", matchselbgcolor, NULL };
 static const char *termcmd[]  = { "st", NULL };
 
 #include "dmenuaction.h"
@@ -113,6 +115,8 @@ static ResourcePref resources[] = {
 	{ "hidbgcolor",      STRING,  &hidbgcolor },
 	{ "hidbordercolor",  STRING,  &hidbordercolor },
 	{ "hidfgcolor",      STRING,  &hidfgcolor },
+	{ "matchselbgcolor", STRING,  &matchselbgcolor },
+	{ "dmenuselbgcolor", STRING,  &dmenuselbgcolor },
 	{ "borderpx",        INTEGER, &borderpx },
 	{ "snap",            INTEGER, &snap },
 	{ "showsystray",     INTEGER, &showsystray },
@@ -173,6 +177,7 @@ static Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ShiftMask,             XK_q,      killclient,     {0} },
+	{ MODKEY|ShiftMask|ControlMask, XK_q,      quit,           {0} },
 };
 
 /* button definitions */
