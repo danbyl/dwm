@@ -92,7 +92,7 @@ enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
-enum { AttachMaster, AttachAbove, AttachBelow, AttachTop, AttachBottom };
+enum { AttachMaster, AttachBottom };
 
 typedef union {
 	int i;
@@ -229,11 +229,8 @@ static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 static void arrange(Monitor *m);
 static void arrangemon(Monitor *m);
-static void attachabove(Client *c);
-static void attachbelow(Client *c);
 static void attachbottom(Client *c);
 static void attachmaster(Client *c);
-static void attachtop(Client *c);
 static void attachstack(Client *c);
 static void buttonpress(XEvent *e);
 static void checkotherwm(void);
@@ -397,9 +394,6 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 };
 static void (*attachfunctions[])(Client *c) = {
 	[AttachMaster] = attachmaster,
-	[AttachAbove] = attachabove,
-	[AttachBelow] = attachbelow,
-	[AttachTop] = attachtop,
 	[AttachBottom] = attachbottom,
 };
 static Atom wmatom[WMLast], netatom[NetLast], xatom[XLast];
@@ -562,31 +556,6 @@ arrangemon(Monitor *m)
 }
 
 void
-attachabove(Client *c)
-{
-	if (c->mon->sel == NULL || c->mon->sel == c->mon->clients || c->mon->sel->isfloating) {
-		attachmaster(c);
-		return;
-	}
-
-	Client *at;
-	for (at = c->mon->clients; at->next != c->mon->sel; at = at->next);
-	c->next = at->next;
-	at->next = c;
-}
-
-void
-attachbelow(Client *c)
-{
-	if(c->mon->sel == NULL || c->mon->sel == c || c->mon->sel->isfloating) {
-		attachmaster(c);
-		return;
-	}
-	c->next = c->mon->sel->next;
-	c->mon->sel->next = c;
-}
-
-void
 attachbottom(Client *c)
 {
 	Client *below = c->mon->clients;
@@ -603,25 +572,6 @@ attachmaster(Client *c)
 {
 	c->next = c->mon->clients;
 	c->mon->clients = c;
-}
-
-void
-attachtop(Client *c)
-{
-	int n;
-	Monitor *m = selmon;
-	Client *below;
-
-	for (n = 1, below = c->mon->clients;
-		below && below->next && (below->isfloating || !ISVISIBLEONTAG(below, c->tags) || n != m->nmaster);
-		n = below->isfloating || !ISVISIBLEONTAG(below, c->tags) ? n + 0 : n + 1, below = below->next);
-	c->next = NULL;
-	if (below) {
-		c->next = below->next;
-		below->next = c;
-	}
-	else
-		c->mon->clients = c;
 }
 
 void

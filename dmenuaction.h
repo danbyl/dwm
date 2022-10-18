@@ -33,22 +33,6 @@ static const DmenuArg actionarg = {
 				}
 			}
 		}, {
-			.name = "change attach function",
-			.arg = {
-				.v = &(DmenuArg){
-					.items = (DmenuItem[]){
-						{ .name = "as master",                 .arg = {.ui = AttachMaster } },
-						{ .name = "above the selected client", .arg = {.ui = AttachAbove } },
-						{ .name = "below the selected client", .arg = {.ui = AttachBelow } },
-						{ .name = "on the top of the stack",   .arg = {.ui = AttachTop } },
-						{ .name = "on the bottom of stack",    .arg = {.ui = AttachBottom } },
-						{ 0 }
-					},
-					.prompt = "Attach:",
-					.func = setattach,
-				}
-			}
-		}, {
 			.name = "reload xresources", .func = xrdb
 		}, {
 			.name = "set master factor",
