@@ -34,3 +34,19 @@ ecalloc(size_t nmemb, size_t size)
 		die("calloc:");
 	return p;
 }
+
+void
+log_msg(const char *func, const char *fmt, ...)
+{
+	FILE *fp = fopen("/tmp/dwm.log", "a");
+	if (!fp)
+		return;
+
+	va_list ap;
+	va_start(ap, fmt);
+	fprintf(fp, "%s: ", func);
+	vfprintf(fp, fmt, ap);
+	fputc('\n', fp);
+	va_end(ap);
+	fclose(fp);
+}
