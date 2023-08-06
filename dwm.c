@@ -258,11 +258,11 @@ static void focusstack(const Arg *arg);
 static void freeicon(Client *c);
 static void freerules(Rule *rules, int rulecount);
 static Picture geticonprop(Window w, unsigned int *icw, unsigned int *ich);
-static pid_t getstatusbarpid();
+static pid_t getstatusbarpid(void);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
-static unsigned int getsystraywidth();
+static unsigned int getsystraywidth(void);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
@@ -270,7 +270,7 @@ static void hide(Client *c);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
-static void load_rules();
+static void load_rules(void);
 static void load_xresources(void);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
@@ -1467,7 +1467,7 @@ getatomprop(Client *c, Atom prop)
 }
 
 pid_t
-getstatusbarpid()
+getstatusbarpid(void)
 {
 	char buf[32], *str = buf, *c;
 	FILE *fp;
@@ -1580,7 +1580,7 @@ getstate(Window w)
 }
 
 unsigned int
-getsystraywidth()
+getsystraywidth(void)
 {
 	unsigned int w = 0;
 	Client *i;
@@ -1755,7 +1755,7 @@ freerules(Rule *rules, int rulecount)
 }
 
 void
-load_rules()
+load_rules(void)
 {
 	int newcount;
 	Rule *newrules;
@@ -3305,7 +3305,7 @@ updatebarpos(Monitor *m)
 }
 
 void
-updateclientlist()
+updateclientlist(void)
 {
 	Client *c;
 	Monitor *m;
