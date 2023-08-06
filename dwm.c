@@ -86,7 +86,7 @@ enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel, SchemeHid }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMIcon, NetWMState, NetWMCheck,
        NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
-       NetWMFullscreen, NetActiveWindow, NetWMWindowType,
+       NetWMFullscreen, NetWMFullscreenMonitors, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetClientInfo, NetLast }; /* EWMH atoms */
 enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
@@ -303,6 +303,7 @@ static void setclientstate(Client *c, long state);
 static void setclienttagprop(Client *c);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
+static void setfullscreenmonitors(Client *c, long indices[4]);
 static void setlayout(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
@@ -859,6 +860,8 @@ clientmessage(XEvent *e)
 				}
 			}
 		}
+	} else if (cme->message_type == netatom[NetWMFullscreenMonitors]) {
+		setfullscreenmonitors(c, cme->data.l);
 	}
 }
 
@@ -2729,6 +2732,10 @@ setfullscreen(Client *c, int fullscreen)
 		resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh);
 		XRaiseWindow(dpy, c->win);
 	} else if (!fullscreen && c->isfullscreen){
+		if (c->isfullscreen == 2) {
+			XChangeProperty(dpy, c->win, netatom[NetWMFullscreenMonitors], XA_CARDINAL, 32,
+				PropModeReplace, (unsigned char*)0, 0);
+		}
 		XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
 			PropModeReplace, (unsigned char*)0, 0);
 		c->isfullscreen = 0;
@@ -2741,6 +2748,38 @@ setfullscreen(Client *c, int fullscreen)
 		resizeclient(c, c->x, c->y, c->w, c->h);
 		arrange(c->mon);
 	}
+}
+
+void
+setfullscreenmonitors(Client *c, long idx[4])
+{
+	int number_of_screens, min_x = 0, min_y = 0, max_x = 0, max_y = 0;
+	XineramaScreenInfo *screen_info = XineramaQueryScreens(dpy, &number_of_screens);
+	if (!screen_info) {
+		return;
+	}
+
+	for (int i = 0; i < 4; i++) {
+		min_x = MIN(min_x, screen_info[idx[i]].x_org);
+		min_y = MIN(min_y, screen_info[idx[i]].y_org);
+		max_x = MAX(max_x, screen_info[idx[i]].x_org + screen_info[idx[i]].width);
+		max_y = MAX(max_y, screen_info[idx[i]].y_org + screen_info[idx[i]].height);
+	}
+
+	XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
+		PropModeReplace, (unsigned char*)&netatom[NetWMFullscreen], 1);
+
+	XChangeProperty(dpy, c->win, netatom[NetWMFullscreenMonitors], XA_CARDINAL, 32,
+		PropModeReplace, (unsigned char*)idx, 4);
+
+	c->isfullscreen = 2;
+	c->oldstate = c->isfloating;
+	c->oldbw = c->bw;
+	c->bw = 0;
+	c->isfloating = 1;
+
+	resizeclient(c, min_x, min_y, max_x - min_x, max_y - min_y);
+	XRaiseWindow(dpy, c->win);
 }
 
 void
@@ -2816,6 +2855,7 @@ setup(void)
 	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
 	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
 	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	netatom[NetWMFullscreenMonitors] = XInternAtom(dpy, "_NET_WM_FULLSCREEN_MONITORS", False);
 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
 	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
