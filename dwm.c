@@ -325,6 +325,7 @@ static void togglebar(const Arg *arg);
 static void toggleborders(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void togglefullscr(const Arg *arg);
+static void togglefullscrm(const Arg *arg);
 static void toggleswallow(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
@@ -3134,7 +3135,18 @@ void
 togglefullscr(const Arg *arg)
 {
   if(selmon->sel)
-    setfullscreen(selmon->sel, !selmon->sel->isfullscreen);
+	  setfullscreen(selmon->sel, !selmon->sel->isfullscreen);
+}
+
+void
+togglefullscrm(const Arg *arg)
+{
+  if (selmon->sel) {
+	  if (selmon->sel->isfullscreen == 2)
+		  setfullscreen(selmon->sel, 0);
+	  else
+		  setfullscreenmonitors(selmon->sel, (long[]){ 0, 0, 1, 0 });
+  }
 }
 
 void

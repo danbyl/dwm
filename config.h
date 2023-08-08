@@ -160,6 +160,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
 	{ MODKEY|ShiftMask,             XK_s,      toggleswallow,  {0} },
 	{ MODKEY|ShiftMask,             XK_f,      togglefullscr,  {0} },
+	{ MODKEY|ShiftMask|ControlMask, XK_f,      togglefullscrm, {0} },
 	{ MODKEY,                       XK_F5,     dmenuaction,    {.v = &actionarg } },
 	{ MODKEY,                       XK_a,      setattach,      {.ui = AttachMaster } },
 	{ MODKEY|ShiftMask,             XK_a,      setattach,      {.ui = AttachBottom } },
