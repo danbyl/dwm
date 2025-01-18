@@ -119,7 +119,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, issticky, issteam, borderless;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, issticky, issteam, borderless, focusonnetactive;
 	unsigned int icw, ich; Picture icon;
 	pid_t pid;
 	Client *next;
@@ -186,6 +186,7 @@ typedef struct {
 	int noswallow;
 	int monitor;
 	int borderless;
+	int focusonnetactive;
 } Rule;
 
 /* Xresources preferences */
@@ -457,6 +458,7 @@ applyrules(Client *c)
 			c->isfloating = r->isfloating;
 			c->noswallow  = r->noswallow;
 			c->borderless  = r->borderless;
+			c->focusonnetactive  = r->focusonnetactive;
 			c->tags |= r->tags;
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
@@ -845,9 +847,9 @@ clientmessage(XEvent *e)
 			setfullscreen(c, (cme->data.l[0] == 1 /* _NET_WM_STATE_ADD    */
 				|| (cme->data.l[0] == 2 /* _NET_WM_STATE_TOGGLE */ && !c->isfullscreen)));
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
-		if (c->issteam) {
+		if (c != selmon->sel && !c->isurgent && !c->focusonnetactive) {
 			seturgent(c, 1);
-		} else {
+		} else if (c->focusonnetactive) {
 			for (i = 0; i < LENGTH(tags) && !((1 << i) & c->tags); i++);
 			if (i < LENGTH(tags)) {
 				if (!ISVISIBLE(c)) {
@@ -2214,6 +2216,8 @@ parserules(const char *path, int *newcount)
 			r->noswallow = strcasecmp(str, "false") ? 0 : 1;
 		} else if (strcasecmp(key, "borderless") == 0) {
 			r->borderless = strcasecmp(str, "true") ? 0 : 1;
+		} else if (strcasecmp(key, "focusonnetactive") == 0) {
+			r->focusonnetactive = strcasecmp(str, "true") ? 0 : 1;
 		}
 	}
 
