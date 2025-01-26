@@ -302,6 +302,8 @@ static void sendmon(Client *c, Monitor *m);
 static void setattach(const Arg *arg);
 static void setclientstate(Client *c, long state);
 static void setclienttagprop(Client *c);
+static void swapmon(Monitor *m1, Monitor *m2);
+static void setclientmon(Client *c, Monitor *m);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setfullscreenmonitors(Client *c, long indices[4]);
@@ -320,6 +322,7 @@ static void strsetmfact(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
+static void tagmonswap(const Arg *arg);
 static void tile(Monitor *m);
 static void togglebar(const Arg *arg);
 static void toggleborders(const Arg *arg);
@@ -2634,6 +2637,57 @@ sendmon(Client *c, Monitor *m)
 }
 
 void
+swapmon(Monitor *m1, Monitor *m2)
+{
+	if (m1 == m2)
+		return;
+
+	unfocus(m1->sel, 1);
+
+	Client *m2sel = m2->sel;
+	m2->sel = m1->sel;
+	m1->sel = m2sel;
+
+	Client *m2clients = m2->clients;
+	setclientmon(m1->clients, m2);
+	setclientmon(m2clients, m1);
+
+	focus(NULL);
+	arrange(NULL);
+}
+
+void
+setclientmon(Client *c, Monitor *m)
+{
+	Client *head = NULL, *tail = NULL;
+
+	for (Client *next; c != NULL; c = next) { 
+		next = c->next;
+		if (ISVISIBLE(c) && c->mon != m) { 
+			if (!head)
+				head = tail = c;
+			detach(c);
+			detachstack(c);
+			c->mon = m;
+			c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
+			if (tail == c) {
+				c->next = c->snext = NULL;
+			} else {
+				tail = (tail->next = tail->snext = c);
+			}
+			setclienttagprop(c);
+		}
+	}
+
+	if (head) {
+		tail->next = m->clients;
+		tail->snext = m->stack;
+		m->clients = head;
+		m->stack = head;
+	}
+}
+
+void
 setborderpx(const Arg *arg)
 {
 	Client *c;
@@ -3092,6 +3146,14 @@ tagmon(const Arg *arg)
 	if (!selmon->sel || !mons->next)
 		return;
 	sendmon(selmon->sel, dirtomon(arg->i));
+}
+
+void
+tagmonswap(const Arg *arg)
+{
+	if (!selmon->sel || !mons->next)
+		return;
+	swapmon(selmon->sel->mon, dirtomon(arg->i));
 }
 
 void
