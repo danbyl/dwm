@@ -1070,6 +1070,12 @@ dirtomon(int dir)
 void
 dmenuaction(const Arg *arg)
 {
+	struct sigaction sa;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sa.sa_handler = SIG_DFL;
+	sigaction(SIGCHLD, &sa, NULL);
+
 	DmenuArg *action = (DmenuArg *)arg->v;
 	int inpipe[2], outpipe[2], outputlen, wstatus;
 	pid_t child;
@@ -1079,7 +1085,7 @@ dmenuaction(const Arg *arg)
 
 	dmenumon[0] = '0' + selmon->num;
 	if (pipe(inpipe) < 0)
-		return;
+		goto reset_sigchld;
 	if (pipe(outpipe) < 0)
 		goto close_in;
 
@@ -1106,16 +1112,21 @@ dmenuaction(const Arg *arg)
 	close(inpipe[1]);
 	close(outpipe[1]);
 
-	waitpid(child, &wstatus, 0);
-	if (WEXITSTATUS(wstatus)) {
+	pid_t pid = waitpid(child, &wstatus, 0);
+	if (pid == -1) {
+		perror("dwm: waitpid");
 		close(outpipe[0]);
-		return;
+		goto reset_sigchld;
+	}
+	if (!WIFEXITED(wstatus) || WEXITSTATUS(wstatus)) {
+		close(outpipe[0]);
+		goto reset_sigchld;
 	}
 
 	outputlen = read(outpipe[0], buf, sizeof(buf) - 1);
 	close(outpipe[0]);
 	if (outputlen < 1)
-		return;
+		goto reset_sigchld;
 	buf[outputlen-1] = '\0';
 
 	if (action->strarg) {
@@ -1129,13 +1140,19 @@ dmenuaction(const Arg *arg)
 			}
 		}
 	}
-	return;
+	goto reset_sigchld;
 close_both:
-		close(outpipe[0]);
-		close(outpipe[1]);
+	close(outpipe[0]);
+	close(outpipe[1]);
 close_in:
-		close(inpipe[0]);
-		close(inpipe[1]);
+	close(inpipe[0]);
+	close(inpipe[1]);
+reset_sigchld:
+	/* do not transform children into zombies when they terminate */
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGCHLD, &sa, NULL);
 }
 
 int
