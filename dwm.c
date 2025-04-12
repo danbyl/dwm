@@ -113,6 +113,7 @@ typedef struct Client Client;
 struct Client {
 	char name[256];
 	float mina, maxa;
+	float cfact;
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
@@ -151,8 +152,11 @@ struct Monitor {
 	int bt;               /* number of tasks */
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
+	int gappih;           /* horizontal gap between windows */
+	int gappiv;           /* vertical gap between windows */
+	int gappoh;           /* horizontal outer gaps */
+	int gappov;           /* vertical outer gaps */
 	unsigned int borderpx;
-	int gapsize;
 	unsigned int seltags;
 	unsigned int sellt;
 	unsigned int tagset[2];
@@ -307,6 +311,7 @@ static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setfullscreenmonitors(Client *c, long indices[4]);
 static void setlayout(const Arg *arg);
+static void setcfact(const Arg *arg);
 static void setmfact(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
@@ -983,7 +988,10 @@ createmon(void)
 	m->showbar = showbar;
 	m->topbar = topbar;
 	m->borderpx = borderpx;
-	m->gapsize = gapsize;
+	m->gappih = gappih;
+	m->gappiv = gappiv;
+	m->gappoh = gappoh;
+	m->gappov = gappov;
 	m->lt[0] = &layouts[0];
 	m->lt[1] = &layouts[1 % LENGTH(layouts)];
 	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
@@ -1843,6 +1851,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
 	c->oldbw = wa->border_width;
+	c->cfact = 1.0;
 
 	updateicon(c);
 	updatetitle(c);
@@ -1968,15 +1977,15 @@ void
 monocle(Monitor *m)
 {
 	unsigned int n;
-	int size;
+	int oh, ov, ih, iv;
 	Client *c;
 
-	getgaps(m, &size, &n);
+	getgaps(m, &oh, &ov, &ih, &iv, &n);
 
 	if (n > 0) /* override layout symbol */
 		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
 	for (c = nexttiled(m->clients); c; c = nexttiled(c->next))
-		resize(c, m->wx + size, m->wy + size, m->ww - 2 * c->bw - 2 * size, m->wh - 2 * c->bw - 2 * size, 0);
+		resize(c, m->wx + ov, m->wy + oh, m->ww - 2 * c->bw - 2 * ov, m->wh - 2 * c->bw - 2 * oh, 0);
 }
 
 void
@@ -1999,7 +2008,9 @@ motionnotify(XEvent *e)
 void
 movemouse(const Arg *arg)
 {
-	int x, y, ocx, ocy, nx, ny, effectivegapsize;
+	int x, y, ocx, ocy, nx, ny;
+	int oh, ov, ih, iv;
+	unsigned int dn;
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -2032,21 +2043,22 @@ movemouse(const Arg *arg)
 
 			nx = ocx + (ev.xmotion.x - x);
 			ny = ocy + (ev.xmotion.y - y);
-			effectivegapsize = gapsize * (enablegaps != 0);
-			if (abs(selmon->wx + effectivegapsize - nx) < snap)
-				nx = selmon->wx + effectivegapsize;
+			getgaps(selmon, &oh, &ov, &ih, &iv, &dn);
+
+			if (abs(selmon->wx + ov - nx) < snap)
+				nx = selmon->wx + ov;
 			else if (abs(selmon->wx - nx) < snap)
 				nx = selmon->wx;
-			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c) + effectivegapsize)) < snap)
-				nx = selmon->wx + selmon->ww - WIDTH(c) - effectivegapsize;
+			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c) + ov)) < snap)
+				nx = selmon->wx + selmon->ww - WIDTH(c) - ov;
 			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c))) < snap)
 				nx = selmon->wx + selmon->ww - WIDTH(c);
-			if (abs(selmon->wy + effectivegapsize - ny) < snap)
-				ny = selmon->wy + effectivegapsize;
+			if (abs(selmon->wy + oh - ny) < snap)
+				ny = selmon->wy + oh;
 			else if (abs(selmon->wy - ny) < snap)
 				ny = selmon->wy;
-			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c) + effectivegapsize)) < snap)
-				ny = selmon->wy + selmon->wh - HEIGHT(c) - effectivegapsize;
+			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c) + oh)) < snap)
+				ny = selmon->wy + selmon->wh - HEIGHT(c) - oh;
 			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)
 				ny = selmon->wy + selmon->wh - HEIGHT(c);
 			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
@@ -2370,8 +2382,9 @@ resizeclient(Client *c, int x, int y, int w, int h)
 void
 resizemouse(const Arg *arg)
 {
-	int ocx, ocy, nx, ny, nw, nh, effectivegapsize = gapsize * (enablegaps != 0), sides = 0, di;
-	unsigned int dui;
+	int ocx, ocy, nx, ny, nw, nh, sides = 0, di;
+	int oh, ov, ih, iv;
+	unsigned int dui, dn;
 	Window dummy;
 	Client *c;
 	Monitor *m;
@@ -2412,12 +2425,13 @@ resizemouse(const Arg *arg)
 			ny = sides & North ? ev.xmotion.y : c->y;
 			nw = c->w;
 			nh = c->h;
+			getgaps(selmon, &oh, &ov, &ih, &iv, &dn);
 
 			if (sides & North) {
 				nh = MAX(c->h - (ev.xmotion.y - c->y), 1);
-				if (abs(selmon->wy + effectivegapsize - ny) < snap) {
-					nh += ny - (selmon->wy + effectivegapsize);
-					ny = selmon->wy + effectivegapsize;
+				if (abs(selmon->wy + oh - ny) < snap) {
+					nh += ny - (selmon->wy + oh);
+					ny = selmon->wy + oh;
 				}
 				else if (abs(selmon->wy - ny) < snap) {
 					nh += ny - selmon->wy;
@@ -2425,22 +2439,22 @@ resizemouse(const Arg *arg)
 				}
 			} else if (sides & South) {
 				nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
-				if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw + effectivegapsize)) < snap)
-					nh = selmon->wy + selmon->wh - c->y - 2 * c->bw - effectivegapsize;
+				if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw + oh)) < snap)
+					nh = selmon->wy + selmon->wh - c->y - 2 * c->bw - oh;
 				else if (abs((selmon->wy + selmon->wh) - (c->y + nh + 2 * c->bw)) < snap)
 					nh = selmon->wy + selmon->wh - c->y - 2 * c->bw;
 			}
 			if (sides & East) {
 				nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
-				if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw + effectivegapsize)) < snap)
-					nw = selmon->wx + selmon->ww - c->x - 2 * c->bw - effectivegapsize;
+				if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw + ov)) < snap)
+					nw = selmon->wx + selmon->ww - c->x - 2 * c->bw - ov;
 				else if (abs((selmon->wx + selmon->ww) - (c->x + nw + 2 * c->bw)) < snap)
 					nw = selmon->wx + selmon->ww - c->x - 2 * c->bw;
 			} else if (sides & West) {
 				nw = MAX(c->w - (ev.xmotion.x - c->x), 1);
-				if (abs(selmon->wx + effectivegapsize - nx) < snap) {
-					nw += nx - (selmon->wx + effectivegapsize);
-					nx = selmon->wx + effectivegapsize;
+				if (abs(selmon->wx + ov - nx) < snap) {
+					nw += nx - (selmon->wx + ov);
+					nx = selmon->wx + ov;
 				}
 				else if (abs(selmon->wx - nx) < snap) {
 					nw += nx - selmon->wx;
@@ -2864,6 +2878,24 @@ setlayout(const Arg *arg)
 		arrange(selmon);
 	else
 		drawbar(selmon);
+}
+
+void
+setcfact(const Arg *arg) {
+	float f;
+	Client *c;
+
+	c = selmon->sel;
+
+	if(!arg || !c || !selmon->lt[selmon->sellt]->arrange)
+		return;
+	f = arg->f + c->cfact;
+	if(arg->f == 0.0)
+		f = 1.0;
+	else if(f < 0.25 || f > 4.0)
+		return;
+	c->cfact = f;
+	arrange(selmon);
 }
 
 /* arg > 1.0 will set mfact absolutely */

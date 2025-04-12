@@ -3,8 +3,10 @@
 /* appearance */
 static unsigned int borderpx = 2;        /* border pixel of windows */
 static unsigned int snap     = 12;       /* snap pixel */
-static unsigned int gapsize  = 15;       /* gap size */
-static int enablegaps        = 0;
+static unsigned int gappih    = 15;       /* horiz inner gap between windows */
+static unsigned int gappiv    = 15;       /* vert inner gap between windows */
+static unsigned int gappoh    = 15;       /* horiz outer gap between windows and screen edge */
+static unsigned int gappov    = 15;       /* vert outer gap between windows and screen edge */
 static int swallowing        = 0;        /* swallowing enabled/disabled */
 static int swallowfloating   = 0;        /* 1 means swallow floating windows by default */
 static int smartgaps         = 0;        /* 1 means no outer gap when there is only one window */
@@ -125,7 +127,14 @@ static ResourcePref resources[] = {
 	{ "nmaster",         INTEGER, &nmaster },
 	{ "resizehints",     INTEGER, &resizehints },
 	{ "mfact",           FLOAT,   &mfact },
-	{ "gapsize",         INTEGER, &gapsize },
+	{ "gapsize",         INTEGER, &gappih },
+	{ "gapsize",         INTEGER, &gappiv },
+	{ "gapsize",         INTEGER, &gappoh },
+	{ "gapsize",         INTEGER, &gappov },
+	{ "gappih",          INTEGER, &gappih },
+	{ "gappiv",          INTEGER, &gappiv },
+	{ "gappoh",          INTEGER, &gappoh },
+	{ "gappov",          INTEGER, &gappov },
 	{ "enablegaps",      INTEGER, &enablegaps },
 	{ "swallowing",      INTEGER, &swallowing },
 	{ "swallowfloating", INTEGER, &swallowfloating },
@@ -143,6 +152,9 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_k,      movestack,      {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY|ShiftMask,             XK_l,      setmfact,       {.f = +0.05} },
+	{ MODKEY|ControlMask,           XK_h,      setcfact,       {.f = +0.25} },
+	{ MODKEY|ControlMask,           XK_l,      setcfact,       {.f = -0.25} },
+	{ MODKEY|ShiftMask,             XK_o,      setcfact,       {.f =  0.00} },
 	{ MODKEY,                       XK_g,      togglegaps,     {0} },
 	{ MODKEY|ShiftMask,             XK_g,      toggleborders,  {0} },
 	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
