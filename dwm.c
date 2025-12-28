@@ -707,17 +707,20 @@ buttonpress(XEvent *e)
 			x += TEXTW(selmon->ltsymbol);
 			c = m->clients;
 
-			do {
-				if (!ISVISIBLE(c))
-					continue;
-				else
-					x += (1.0 / (double)m->bt) * m->btw;
-			} while (ev->x > x && (c = c->next));
-
 			if (c) {
-				click = ClkWinTitle;
-				arg.v = c;
+				do {
+					if (!ISVISIBLE(c))
+						continue;
+					else
+						x += (1.0 / (double)m->bt) * m->btw;
+				} while (ev->x > x && (c = c->next));
+
+				if (c) {
+					click = ClkWinTitle;
+					arg.v = c;
+				}
 			}
+
 		}
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
@@ -3353,6 +3356,8 @@ void
 togglewinhidden(const Arg *arg)
 {
 	Client *c = (Client *)arg->v;
+	if (!c)
+		return;
 	if (HIDDEN(c))
 		show(c);
 	else
